@@ -6943,6 +6943,7 @@ gckOS_SetGPUPower(
     struct clk *clk_vg_axi = Os->device->clk_vg_axi;
 
     gctBOOL oldClockState = gcvFALSE;
+    gctBOOL oldPowerState = gcvFALSE;
 
     gcmkHEADER_ARG("Os=0x%X Core=%d Clock=%d Power=%d", Os, Core, Clock, Power);
 
@@ -6952,15 +6953,20 @@ gckOS_SetGPUPower(
         if (Core == gcvCORE_VG)
         {
             oldClockState = Os->device->kernels[Core]->vg->hardware->clockState;
+            oldPowerState = Os->device->kernels[Core]->vg->hardware->powerState;
         }
         else
         {
 #endif
             oldClockState = Os->device->kernels[Core]->hardware->clockState;
+            oldPowerState = Os->device->kernels[Core]->hardware->powerState;
 #if gcdENABLE_VG
         }
 #endif
     }
+	if((Power == gcvTRUE) && (oldPowerState == gcvFALSE) &&
+		!IS_ERR(Os->device->gpu_regulator))
+            regulator_enable(Os->device->gpu_regulator);
 
     if (Clock == gcvTRUE) {
         if (oldClockState == gcvFALSE) {
@@ -7003,8 +7009,10 @@ gckOS_SetGPUPower(
             }
         }
     }
-
-
+	if((Power == gcvFALSE) && (oldPowerState == gcvTRUE) &&
+		!IS_ERR(Os->device->gpu_regulator))
+            regulator_disable(Os->device->gpu_regulator);
+    /* TODO: Put your code here. */
     gcmkFOOTER_NO();
     return gcvSTATUS_OK;
 }
