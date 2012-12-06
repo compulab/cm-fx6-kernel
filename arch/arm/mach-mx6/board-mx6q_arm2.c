@@ -161,7 +161,7 @@
 
 void __init early_console_setup(unsigned long base, struct clk *clk);
 static struct clk *sata_clk;
-static int esai_record;
+static int esai_record = 0;
 static int sgtl5000_en;
 static int spdif_en;
 static int flexcan_en;
@@ -355,8 +355,10 @@ static int mx6_arm2_fec_phy_init(struct phy_device *phydev)
 
 	/*check phy power*/
 	val = phy_read(phydev, 0x0);
+ 
 	if (val & BMCR_PDOWN)
 		phy_write(phydev, 0x0, (val & ~BMCR_PDOWN));
+
 	return 0;
 }
 
@@ -1879,6 +1881,7 @@ static int __init mx6_arm2_init_audio(void)
 	return 0;
 }
 
+#if 0
 static int __init early_use_esai_record(char *p)
 {
 	esai_record = 1;
@@ -1886,6 +1889,7 @@ static int __init early_use_esai_record(char *p)
 }
 
 early_param("esai_record", early_use_esai_record);
+#endif
 
 static struct mxc_mlb_platform_data mx6_arm2_mlb150_data = {
 	.reg_nvcc		= NULL,
@@ -2158,14 +2162,14 @@ static void __init mx6_arm2_init(void)
 		imx6_init_fec(fec_data);
 
 	imx6q_add_pm_imx(0, &mx6_arm2_pm_data);
-	imx6q_add_sdhci_usdhc_imx(3, &mx6_arm2_sd4_data);
+//	imx6q_add_sdhci_usdhc_imx(3, &mx6_arm2_sd4_data);
 	imx6q_add_sdhci_usdhc_imx(2, &mx6_arm2_sd3_data);
 	imx_add_viv_gpu(&imx6_gpu_data, &imx6_gpu_pdata);
 	if (cpu_is_mx6q())
 		imx6q_add_ahci(0, &mx6_arm2_sata_data);
 	imx6q_add_vpu();
 	mx6_arm2_init_usb();
-	mx6_arm2_init_audio();
+//	mx6_arm2_init_audio();
 	platform_device_register(&arm2_vmmc_reg_devices);
 	mx6_cpu_regulator_init();
 

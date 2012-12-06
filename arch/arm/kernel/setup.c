@@ -804,7 +804,7 @@ static struct machine_desc * __init setup_machine_tags(unsigned int nr)
 	 */
 	for_each_machine_desc(p)
 		if (nr == p->nr) {
-			printk("Machine: %s\n", p->name);
+			printk("Machine [%d]: %s \n", p->nr, p->name);
 			mdesc = p;
 			break;
 		}
