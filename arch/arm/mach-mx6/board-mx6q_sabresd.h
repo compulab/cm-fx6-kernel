@@ -206,7 +206,7 @@ static iomux_v3_cfg_t mx6q_sabresd_pads[] = {
 	MX6Q_PAD_NANDF_D2__GPIO_2_2,		/* SD2_CD */
 	MX6Q_PAD_NANDF_D3__GPIO_2_3,		/* SD2_WP */
 
-	/* USDHC3 */
+	/* USDHC3 -- SD-card */
 	MX6Q_PAD_SD3_CLK__USDHC3_CLK_50MHZ,
 	MX6Q_PAD_SD3_CMD__USDHC3_CMD_50MHZ,
 	MX6Q_PAD_SD3_DAT0__USDHC3_DAT0_50MHZ,

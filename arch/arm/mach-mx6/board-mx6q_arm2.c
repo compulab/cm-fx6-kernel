@@ -88,6 +88,7 @@
 #define MX6_ARM2_ECSPI1_CS0		IMX_GPIO_NR(2, 30)
 #define MX6_ARM2_ECSPI1_CS1		IMX_GPIO_NR(3, 19)
 #define MX6_ARM2_USB_OTG_PWR		IMX_GPIO_NR(3, 22)
+#define MX6_ARM2_USBHUB_nRST		IMX_GPIO_NR(7, 8)
 #define MX6_ARM2_DISP0_PWR		IMX_GPIO_NR(3, 24)
 #define MX6_ARM2_DISP0_I2C_EN		IMX_GPIO_NR(3, 28)
 #define MX6_ARM2_CAP_TCH_INT		IMX_GPIO_NR(3, 31)
@@ -97,8 +98,8 @@
 #define MX6_ARM2_CSI0_PWN		IMX_GPIO_NR(5, 23)
 #define MX6_ARM2_CAN2_EN		IMX_GPIO_NR(5, 24)
 #define MX6_ARM2_CSI0_RST_TVIN		IMX_GPIO_NR(5, 25)
-#define MX6_ARM2_SD3_CD			IMX_GPIO_NR(6, 11)
-#define MX6_ARM2_SD3_WP			IMX_GPIO_NR(6, 14)
+#define MX6_ARM2_SD3_CD			IMX_GPIO_NR(7, 1)
+#define MX6_ARM2_SD3_WP			IMX_GPIO_NR(7, 0)
 #define MX6_ARM2_CAN1_STBY		IMX_GPIO_NR(7, 12)
 #define MX6_ARM2_CAN1_EN		IMX_GPIO_NR(7, 13)
 #define MX6_ARM2_MAX7310_1_BASE_ADDR	IMX_GPIO_NR(8, 0)
@@ -266,19 +267,11 @@ static int plt_sd_pad_change(unsigned int index, int clock)
 static const struct esdhc_platform_data mx6_arm2_sd3_data __initconst = {
 	.cd_gpio		= MX6_ARM2_SD3_CD,
 	.wp_gpio		= MX6_ARM2_SD3_WP,
-	.support_18v		= 1,
 	.support_8bit		= 1,
 	.keep_power_at_suspend	= 1,
 	.delay_line		= 0,
 	.platform_pad_change	= plt_sd_pad_change,
-};
-
-/* No card detect signal for SD4 on ARM2 board*/
-static const struct esdhc_platform_data mx6_arm2_sd4_data __initconst = {
-	.always_present		= 1,
-	.support_8bit		= 1,
-	.keep_power_at_suspend	= 1,
-	.platform_pad_change	= plt_sd_pad_change,
+	.cd_type		= ESDHC_CD_CONTROLLER,
 };
 
 static int __init gpmi_nand_platform_init(void)
@@ -1231,6 +1224,16 @@ static void __init mx6_arm2_init_usb(void)
 {
 	int ret = 0;
 
+	/* reset USB hub */
+	ret = gpio_request(MX6_ARM2_USBHUB_nRST, "usb-hub-reset");
+	if (ret) {
+		pr_err("failed to get USBHUB_nRST GPIO: %d \n", ret);
+		return;
+	}
+	gpio_direction_output(MX6_ARM2_USBHUB_nRST, 0);
+	udelay(1);
+	gpio_set_value(MX6_ARM2_USBHUB_nRST, 1);
+
 	imx_otg_base = MX6_IO_ADDRESS(MX6Q_USB_OTG_BASE_ADDR);
 
 	/* disable external charger detect,
@@ -2162,7 +2165,6 @@ static void __init mx6_arm2_init(void)
 		imx6_init_fec(fec_data);
 
 	imx6q_add_pm_imx(0, &mx6_arm2_pm_data);
-//	imx6q_add_sdhci_usdhc_imx(3, &mx6_arm2_sd4_data);
 	imx6q_add_sdhci_usdhc_imx(2, &mx6_arm2_sd3_data);
 	imx_add_viv_gpu(&imx6_gpu_data, &imx6_gpu_pdata);
 	if (cpu_is_mx6q())
