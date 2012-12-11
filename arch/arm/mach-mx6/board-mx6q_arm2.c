@@ -425,6 +425,7 @@ static void spi_device_init(void)
 				ARRAY_SIZE(m25p32_spi0_board_info));
 }
 
+#ifdef CONFIG_GPIO_PCA953X
 static int max7310_1_setup(struct i2c_client *client,
 	unsigned gpio_base, unsigned ngpio,
 	void *context)
@@ -478,6 +479,7 @@ static struct pca953x_platform_data max7310_u48_platdata = {
 	.invert		= 0,
 	.setup		= max7310_u48_setup,
 };
+#endif	// CONFIG_GPIO_PCA953X
 
 static void ddc_dvi_init(void)
 {
@@ -875,13 +877,17 @@ static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
 	{
 		I2C_BOARD_INFO("max17135", 0x48),
 		.platform_data = &max17135_pdata,
-	}, {
+	},
+#ifdef CONFIG_GPIO_PCA953X
+	{
 		I2C_BOARD_INFO("max7310", 0x1F),
 		.platform_data = &max7310_platdata,
 	}, {
 		I2C_BOARD_INFO("max7310", 0x1B),
 		.platform_data = &max7310_u48_platdata,
-	}, {
+	},
+#endif
+	{
 		I2C_BOARD_INFO("mxc_dvi", 0x50),
 		.platform_data = &sabr_ddc_dvi_data,
 		.irq = gpio_to_irq(MX6_ARM2_DISP0_DET_INT),
