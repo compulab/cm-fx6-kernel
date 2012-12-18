@@ -140,7 +140,7 @@ int sata_phy_cr_read(u32 *data, void __iomem *mmio)
 int sata_init(void __iomem *addr, unsigned long timer1ms)
 {
 	u32 tmpdata;
-	int iterations = 20;
+	int iter;
 
 	/*
 	 * Make sure that SATA PHY is enabled
@@ -149,48 +149,53 @@ int sata_init(void __iomem *addr, unsigned long timer1ms)
 	tmpdata = readl(addr + PORT_PHY_CTL);
 	writel(tmpdata & (~PORT_PHY_CTL_PDDQ_LOC), addr + PORT_PHY_CTL);
 
-	/* Reset HBA */
-	writel(HOST_RESET, addr + HOST_CTL);
+	sata_global_reset(addr);
 
-	tmpdata = readl(addr + HOST_VERSIONR);
-	tmpdata = 0;
-	while (readl(addr + HOST_VERSIONR) == 0) {
-		tmpdata++;
-		if (tmpdata > 100000) {
-			pr_err("Can't recover from RESET HBA!\n");
-			break;
-		}
-	}
+	/* Enable interrupts from the SATA block */
+	writel(HOST_IRQ_EN, addr + HOST_CTL);
 
 	tmpdata = readl(addr + HOST_CAP);
-	if (!(tmpdata & HOST_CAP_SSS)) {
-		tmpdata |= HOST_CAP_SSS;
-		writel(tmpdata, addr + HOST_CAP);
-	}
-	tmpdata = readl(addr + HOST_CAP);
+	if ((tmpdata & HOST_CAP_SSS) == 0)
+		writel((tmpdata | HOST_CAP_SSS), addr + HOST_CAP);
 
-	if (!(readl(addr + HOST_PORTS_IMPL) & 0x1))
-		writel((readl(addr + HOST_PORTS_IMPL) | 0x1),
-			addr + HOST_PORTS_IMPL);
+	tmpdata = readl(addr + HOST_PORTS_IMPL);
+	if ((tmpdata & 1) == 0)
+		writel((tmpdata | 1), addr + HOST_PORTS_IMPL);
 
 	writel(timer1ms, addr + HOST_TIMER1MS);
 
 	/* Release resources when there is no device on the port */
-	do {
-		if ((readl(addr + PORT_SATA_SR) & 0xF) == 0)
-			msleep(25);
-		else
-			break;
-
-		if (iterations == 0) {
-			pr_info("No sata disk.\n");
-			/* Enter into PDDQ mode, save power */
-			tmpdata = readl(addr + PORT_PHY_CTL);
-			writel(tmpdata | PORT_PHY_CTL_PDDQ_LOC,
-					addr + PORT_PHY_CTL);
-			return -ENODEV;
+	iter = 20;
+	while (iter--) {
+		tmpdata = readl(addr + PORT_SATA_SR);
+		if (tmpdata & 0x0F) {
+			pr_info("SATA device presence detected. Status: %03x \n", tmpdata);
+			return 0;
 		}
-	} while (iterations-- > 0);
+		msleep(25);
+	}
 
-	return 0;
+	pr_info("No SATA device detected \n");
+	/* Enter into PDDQ mode, save power */
+	tmpdata = readl(addr + PORT_PHY_CTL);
+	writel(tmpdata | PORT_PHY_CTL_PDDQ_LOC, addr + PORT_PHY_CTL);
+	return -ENODEV;
 }
+
+void sata_global_reset(void __iomem *addr)
+{
+	u32 tmpdata;
+	int iter;
+
+	/* Reset HBA */
+	writel(HOST_RESET, addr + HOST_CTL);
+	while (readl(addr + HOST_CTL) & HOST_RESET);
+	/* wait for reset completion that is not documented,
+	 * but seemingly does somethig
+	 */
+	iter = 1000;
+	while (((tmpdata = readl(addr + HOST_VERSIONR)) == 0) && (--iter > 0))
+		udelay(1);
+	pr_info("SATA block version level: %08x \n", tmpdata);
+}
+

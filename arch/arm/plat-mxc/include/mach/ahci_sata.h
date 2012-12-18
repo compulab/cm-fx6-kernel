@@ -21,12 +21,14 @@
 
 enum {
 	HOST_CAP = 0x00,
+	HOST_CAP_SXS = (1 << 5), /* Supports External SATA */
 	HOST_CAP_SSS = (1 << 27), /* Staggered Spin-up */
 	HOST_CTL		= 0x04, /* global host control */
 	HOST_RESET		= (1 << 0),  /* reset controller; self-clear */
+	HOST_IRQ_EN		= (1 << 1),  /* global IRQ enable */
 	HOST_PORTS_IMPL	= 0x0c,
 	HOST_TIMER1MS = 0xe0, /* Timer 1-ms */
-	HOST_VERSIONR = 0xfc, /* host version register*/
+	HOST_VERSIONR = 0xf8, /* host version register*/
 
 	/* Offest used to control the MPLL input clk */
 	PHY_CR_CLOCK_FREQ_OVRD = 0x12,
@@ -59,4 +61,5 @@ extern int sata_phy_cr_addr(u32 addr, void __iomem *mmio);
 extern int sata_phy_cr_write(u32 data, void __iomem *mmio);
 extern int sata_phy_cr_read(u32 *data, void __iomem *mmio);
 extern int sata_init(void __iomem *addr, unsigned long timer1ms);
+extern void sata_global_reset(void __iomem *addr);
 #endif /* __PLAT_MXC_AHCI_SATA_H__ */

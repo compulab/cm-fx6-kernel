@@ -104,6 +104,17 @@
 #define MX6_ARM2_CAN1_EN		IMX_GPIO_NR(7, 13)
 #define MX6_ARM2_MAX7310_1_BASE_ADDR	IMX_GPIO_NR(8, 0)
 #define MX6_ARM2_MAX7310_2_BASE_ADDR	IMX_GPIO_NR(8, 8)
+
+#define MX6_ARM2_iSSD_SATA_PWREN	IMX_GPIO_NR(1, 28)
+#define MX6_ARM2_iSSD_SATA_nSTDBY1	IMX_GPIO_NR(3, 20)
+#define MX6_ARM2_iSSD_SATA_nSTDBY2	IMX_GPIO_NR(5, 2)
+#define MX6_ARM2_iSSD_SATA_LDO_EN	IMX_GPIO_NR(2, 16)
+#define MX6_ARM2_iSSD_SATA_nRSTDLY	IMX_GPIO_NR(6, 6)
+#define MX6_ARM2_iSSD_SATA_VDDC_CTRL	IMX_GPIO_NR(1, 30)
+#define MX6_ARM2_iSSD_SATA_PHY_SLP	IMX_GPIO_NR(3, 23)
+#define MX6_ARM2_iSSD_SATA_STBY_REQ	IMX_GPIO_NR(3, 29)
+#define MX6_ARM2_iSSD_SATA_PWLOSS_INT	IMX_GPIO_NR(6, 31)
+
 #define MX6DL_ARM2_EPDC_SDDO_0		IMX_GPIO_NR(2, 22)
 #define MX6DL_ARM2_EPDC_SDDO_1		IMX_GPIO_NR(3, 10)
 #define MX6DL_ARM2_EPDC_SDDO_2		IMX_GPIO_NR(3, 12)
@@ -115,14 +126,14 @@
 #define MX6DL_ARM2_EPDC_SDDO_8		IMX_GPIO_NR(2, 24)
 #define MX6DL_ARM2_EPDC_SDDO_9		IMX_GPIO_NR(3, 15)
 #define MX6DL_ARM2_EPDC_SDDO_10		IMX_GPIO_NR(3, 16)
-#define MX6DL_ARM2_EPDC_SDDO_11		IMX_GPIO_NR(3, 23)
+// #define MX6DL_ARM2_EPDC_SDDO_11		IMX_GPIO_NR(3, 23)
 #define MX6DL_ARM2_EPDC_SDDO_12		IMX_GPIO_NR(3, 19)
 #define MX6DL_ARM2_EPDC_SDDO_13		IMX_GPIO_NR(3, 13)
 #define MX6DL_ARM2_EPDC_SDDO_14		IMX_GPIO_NR(3, 14)
-#define MX6DL_ARM2_EPDC_SDDO_15		IMX_GPIO_NR(5, 2)
+// #define MX6DL_ARM2_EPDC_SDDO_15		IMX_GPIO_NR(5, 2)
 #define MX6DL_ARM2_EPDC_GDCLK		IMX_GPIO_NR(2, 17)
-#define MX6DL_ARM2_EPDC_GDSP		IMX_GPIO_NR(2, 16)
-#define MX6DL_ARM2_EPDC_GDOE		IMX_GPIO_NR(6, 6)
+// #define MX6DL_ARM2_EPDC_GDSP		IMX_GPIO_NR(2, 16)
+// #define MX6DL_ARM2_EPDC_GDOE		IMX_GPIO_NR(6, 6)
 #define MX6DL_ARM2_EPDC_GDRL		IMX_GPIO_NR(5, 4)
 #define MX6DL_ARM2_EPDC_SDCLK		IMX_GPIO_NR(3, 31)
 #define MX6DL_ARM2_EPDC_SDOEZ		IMX_GPIO_NR(3, 30)
@@ -929,8 +940,8 @@ static int epdc_get_pins(void)
 	ret |= gpio_request(MX6DL_ARM2_EPDC_SDDO_6, "epdc_d6");
 	ret |= gpio_request(MX6DL_ARM2_EPDC_SDDO_7, "epdc_d7");
 	ret |= gpio_request(MX6DL_ARM2_EPDC_GDCLK, "epdc_gdclk");
-	ret |= gpio_request(MX6DL_ARM2_EPDC_GDSP, "epdc_gdsp");
-	ret |= gpio_request(MX6DL_ARM2_EPDC_GDOE, "epdc_gdoe");
+//	ret |= gpio_request(MX6DL_ARM2_EPDC_GDSP, "epdc_gdsp");
+//	ret |= gpio_request(MX6DL_ARM2_EPDC_GDOE, "epdc_gdoe");
 	ret |= gpio_request(MX6DL_ARM2_EPDC_GDRL, "epdc_gdrl");
 	ret |= gpio_request(MX6DL_ARM2_EPDC_SDCLK, "epdc_sdclk");
 	ret |= gpio_request(MX6DL_ARM2_EPDC_SDOE, "epdc_sdoe");
@@ -955,8 +966,8 @@ static void epdc_put_pins(void)
 	gpio_free(MX6DL_ARM2_EPDC_SDDO_6);
 	gpio_free(MX6DL_ARM2_EPDC_SDDO_7);
 	gpio_free(MX6DL_ARM2_EPDC_GDCLK);
-	gpio_free(MX6DL_ARM2_EPDC_GDSP);
-	gpio_free(MX6DL_ARM2_EPDC_GDOE);
+//	gpio_free(MX6DL_ARM2_EPDC_GDSP);
+//	gpio_free(MX6DL_ARM2_EPDC_GDOE);
 	gpio_free(MX6DL_ARM2_EPDC_GDRL);
 	gpio_free(MX6DL_ARM2_EPDC_SDCLK);
 	gpio_free(MX6DL_ARM2_EPDC_SDOE);
@@ -1044,8 +1055,8 @@ static void epdc_enable_pins(void)
 	gpio_direction_input(MX6DL_ARM2_EPDC_SDDO_6);
 	gpio_direction_input(MX6DL_ARM2_EPDC_SDDO_7);
 	gpio_direction_input(MX6DL_ARM2_EPDC_GDCLK);
-	gpio_direction_input(MX6DL_ARM2_EPDC_GDSP);
-	gpio_direction_input(MX6DL_ARM2_EPDC_GDOE);
+//	gpio_direction_input(MX6DL_ARM2_EPDC_GDSP);
+//	gpio_direction_input(MX6DL_ARM2_EPDC_GDOE);
 	gpio_direction_input(MX6DL_ARM2_EPDC_GDRL);
 	gpio_direction_input(MX6DL_ARM2_EPDC_SDCLK);
 	gpio_direction_input(MX6DL_ARM2_EPDC_SDOE);
@@ -1073,8 +1084,8 @@ static void epdc_disable_pins(void)
 	gpio_direction_output(MX6DL_ARM2_EPDC_SDDO_6, 0);
 	gpio_direction_output(MX6DL_ARM2_EPDC_SDDO_7, 0);
 	gpio_direction_output(MX6DL_ARM2_EPDC_GDCLK, 0);
-	gpio_direction_output(MX6DL_ARM2_EPDC_GDSP, 0);
-	gpio_direction_output(MX6DL_ARM2_EPDC_GDOE, 0);
+//	gpio_direction_output(MX6DL_ARM2_EPDC_GDSP, 0);
+//	gpio_direction_output(MX6DL_ARM2_EPDC_GDOE, 0);
 	gpio_direction_output(MX6DL_ARM2_EPDC_GDRL, 0);
 	gpio_direction_output(MX6DL_ARM2_EPDC_SDCLK, 0);
 	gpio_direction_output(MX6DL_ARM2_EPDC_SDOE, 0);
@@ -1266,6 +1277,48 @@ static struct viv_gpu_platform_data imx6_gpu_pdata __initdata = {
 	.reserved_mem_size = SZ_128M + SZ_64M,
 };
 
+/** 
+ * Power sequence required by 
+ * SanDisk i100 SSD (iSSD) 
+ */
+static int mx6_arm2_iSSD_power_sequence(void)
+{
+	int ret = 0;
+
+	/* acquire GPIO pads */
+	ret |= gpio_request(MX6_ARM2_iSSD_SATA_VDDC_CTRL, "iSSD-SATA-vdcc-ctrl");
+	ret |= gpio_request(MX6_ARM2_iSSD_SATA_STBY_REQ, "iSSD-SATA-stby-req");
+	ret |= gpio_request(MX6_ARM2_iSSD_SATA_PWLOSS_INT, "iSSD-SATA-pwloss-int");
+
+	ret |= gpio_request(MX6_ARM2_iSSD_SATA_PHY_SLP, "iSSD-SATA-devslp");
+	ret |= gpio_request(MX6_ARM2_iSSD_SATA_nRSTDLY, "iSSD-SATA-nrst");
+	ret |= gpio_request(MX6_ARM2_iSSD_SATA_PWREN, "iSSD-SATA-pwren");
+	ret |= gpio_request(MX6_ARM2_iSSD_SATA_nSTDBY1, "iSSD-SATA-nstdby1");
+	ret |= gpio_request(MX6_ARM2_iSSD_SATA_nSTDBY2, "iSSD-SATA-nstdby2");
+	ret |= gpio_request(MX6_ARM2_iSSD_SATA_LDO_EN, "iSSD-SATA-ldo-en");
+	if (ret) {
+		pr_err("iSSD power sequence: failed to get GPIO: %d \n", ret);
+		return ret;
+	}
+
+	/* TODO:
+	 * implement logic associated with input signals
+	 */
+	gpio_direction_input(MX6_ARM2_iSSD_SATA_VDDC_CTRL);
+	gpio_direction_input(MX6_ARM2_iSSD_SATA_STBY_REQ);
+	gpio_direction_input(MX6_ARM2_iSSD_SATA_PWLOSS_INT);
+
+	gpio_direction_output(MX6_ARM2_iSSD_SATA_PHY_SLP, 1);
+	gpio_direction_output(MX6_ARM2_iSSD_SATA_nRSTDLY, 1);
+
+	gpio_direction_output(MX6_ARM2_iSSD_SATA_PWREN, 1);	// VCC_IO
+	gpio_direction_output(MX6_ARM2_iSSD_SATA_nSTDBY1, 1);	// VCC_FLASH
+	gpio_direction_output(MX6_ARM2_iSSD_SATA_nSTDBY2, 1);	// VCCQ
+	gpio_direction_output(MX6_ARM2_iSSD_SATA_LDO_EN, 1);	// VDDC
+
+	return 0;
+}
+
 /* HW Initialization, if return 0, initialization is successful. */
 static int mx6_arm2_sata_init(struct device *dev, void __iomem *addr)
 {
@@ -1273,15 +1326,14 @@ static int mx6_arm2_sata_init(struct device *dev, void __iomem *addr)
 	int ret = 0;
 	struct clk *clk;
 
-	/* Enable SATA PWR CTRL_0 of MAX7310 */
-	gpio_request(MX6_ARM2_MAX7310_1_BASE_ADDR, "SATA_PWR_EN");
-	gpio_direction_output(MX6_ARM2_MAX7310_1_BASE_ADDR, 1);
+	mx6_arm2_iSSD_power_sequence();
 
 	sata_clk = clk_get(dev, "imx_sata_clk");
 	if (IS_ERR(sata_clk)) {
 		dev_err(dev, "no sata clock.\n");
 		return PTR_ERR(sata_clk);
 	}
+
 	ret = clk_enable(sata_clk);
 	if (ret) {
 		dev_err(dev, "can't enable sata clock.\n");
@@ -1303,11 +1355,16 @@ static int mx6_arm2_sata_init(struct device *dev, void __iomem *addr)
 	 *.tx_edgerate_0(iomuxc_gpr13[0]),
 	 */
 	tmpdata = readl(IOMUXC_GPR13);
-	writel(((tmpdata & ~0x07FFFFFD) | 0x0593A044), IOMUXC_GPR13);
+	tmpdata &= ~0x07FFFFFD;
+	// tmpdata |= 0x0593A044;
+	tmpdata |= 0x0593A4C4;		// 3.0 Gbps
+	// tmpdata |= 0x059324C4;	// 1.5 Gbps
+	writel(tmpdata, IOMUXC_GPR13);
 
 	/* enable SATA_PHY PLL */
 	tmpdata = readl(IOMUXC_GPR13);
-	writel(((tmpdata & ~0x2) | 0x2), IOMUXC_GPR13);
+	tmpdata |= 0x2;
+	writel(tmpdata, IOMUXC_GPR13);
 
 	/* Get the AHB clock rate, and configure the TIMER1MS reg later */
 	clk = clk_get(NULL, "ahb");
@@ -1327,9 +1384,6 @@ release_sata_clk:
 	clk_disable(sata_clk);
 put_sata_clk:
 	clk_put(sata_clk);
-	/* Disable SATA PWR CTRL_0 of MAX7310 */
-	gpio_request(MX6_ARM2_MAX7310_1_BASE_ADDR, "SATA_PWR_EN");
-	gpio_direction_output(MX6_ARM2_MAX7310_1_BASE_ADDR, 0);
 
 	return ret;
 }
@@ -1338,11 +1392,6 @@ static void mx6_arm2_sata_exit(struct device *dev)
 {
 	clk_disable(sata_clk);
 	clk_put(sata_clk);
-
-	/* Disable SATA PWR CTRL_0 of MAX7310 */
-	gpio_request(MX6_ARM2_MAX7310_1_BASE_ADDR, "SATA_PWR_EN");
-	gpio_direction_output(MX6_ARM2_MAX7310_1_BASE_ADDR, 0);
-
 }
 
 static struct ahci_platform_data mx6_arm2_sata_data = {
