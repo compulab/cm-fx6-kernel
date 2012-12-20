@@ -298,43 +298,50 @@ static const struct spi_imx_master cm_fx6_spi_data __initconst = {
 };
 
 #if defined(CONFIG_MTD_M25P80) || defined(CONFIG_MTD_M25P80_MODULE)
-static struct mtd_partition m25p32_partitions[] = {
+static struct mtd_partition cm_fx6_spi_flash_partitions[] = {
 	{
-		.name	= "bootloader",
+		.name	= "uboot",
 		.offset	= 0,
-		.size	= 0x00100000,
+		.size	= SZ_512K + SZ_256K,
 	}, {
-		.name	= "kernel",
+		.name	= "uboot environment",
+		.offset	= MTDPART_OFS_APPEND,
+		.size	= SZ_256K,
+	}, {
+		.name	= "reserved",
 		.offset	= MTDPART_OFS_APPEND,
 		.size	= MTDPART_SIZ_FULL,
 	},
 };
 
-static struct flash_platform_data m25p32_spi_flash_data = {
-	.name		= "m25p32",
-	.parts		= m25p32_partitions,
-	.nr_parts	= ARRAY_SIZE(m25p32_partitions),
-	.type		= "m25p32",
+/*
+ * The default cm-fx6 flash chip is 'sst25vf016b'.
+ * It is JEDEC compliant, so we do not specify the .type field below.
+ */
+static struct flash_platform_data cm_fx6_spi_flash_data = {
+	.name		= "spi_flash",
+	.parts		= cm_fx6_spi_flash_partitions,
+	.nr_parts	= ARRAY_SIZE(cm_fx6_spi_flash_partitions),
 };
 #endif
 
-static struct spi_board_info m25p32_spi0_board_info[] __initdata = {
-#if defined(CONFIG_MTD_M25P80)
+static struct spi_board_info cm_fx6_spi0_board_info[] = {
+#if defined(CONFIG_MTD_M25P80) || defined(CONFIG_MTD_M25P80_MODULE)
 	{
 		/* The modalias must be the same as spi device driver name */
 		.modalias	= "m25p80",
 		.max_speed_hz	= 20000000,
 		.bus_num	= 0,
-		.chip_select	= 1,
-		.platform_data	= &m25p32_spi_flash_data,
+		.chip_select	= 0,
+		.platform_data	= &cm_fx6_spi_flash_data,
 	},
 #endif
 };
 
 static void spi_device_init(void)
 {
-	spi_register_board_info(m25p32_spi0_board_info,
-				ARRAY_SIZE(m25p32_spi0_board_info));
+	spi_register_board_info(cm_fx6_spi0_board_info,
+				ARRAY_SIZE(cm_fx6_spi0_board_info));
 }
 
 static int max7310_1_setup(struct i2c_client *client,
