@@ -85,7 +85,7 @@
 #include "board-mx6dl_arm2.h"
 
 /* GPIO PIN, sort by PORT/BIT */
-#define MX6_ARM2_LDB_BACKLIGHT		IMX_GPIO_NR(1, 9)
+// #define MX6_ARM2_LDB_BACKLIGHT		IMX_GPIO_NR(1, 9)
 #define MX6_ARM2_ECSPI1_CS0		IMX_GPIO_NR(2, 30)
 #define MX6_ARM2_ECSPI1_CS1		IMX_GPIO_NR(3, 19)
 #define MX6_ARM2_USB_OTG_PWR		IMX_GPIO_NR(3, 22)
@@ -162,9 +162,12 @@
 
 #define MX6_ARM2_IO_EXP_GPIO(x)		(MX6_ARM2_PCA9555_BASE_ADDR + (x))
 
-#define MX6_ARM2_PCIE_PWR_EN		MX6_ARM2_IO_EXP_GPIO(1)
-#define MX6_ARM2_PCIE_RESET		MX6_ARM2_IO_EXP_GPIO(2)
-#define MX6_ARM2_CAN2_STBY		MX6_ARM2_IO_EXP_GPIO(3)
+#define MX6_ARM2_DVIT_nPD		MX6_ARM2_IO_EXP_GPIO(2)
+#define MX6_ARM2_DVIT_MSEN		MX6_ARM2_IO_EXP_GPIO(3)
+
+#define MX6_ARM2_PCIE_PWR_EN		MX6_ARM2_IO_EXP_GPIO(14)
+#define MX6_ARM2_PCIE_RESET		MX6_ARM2_IO_EXP_GPIO(14)
+#define MX6_ARM2_CAN2_STBY		MX6_ARM2_IO_EXP_GPIO(14)
 
 
 #define BMCR_PDOWN			0x0800 /* PHY Powerdown */
@@ -1450,9 +1453,9 @@ static struct mipi_dsi_platform_data mipi_dsi_pdata = {
 static struct ipuv3_fb_platform_data sabr_fb_data[] = {
 	{ /*fb0*/
 	.disp_dev		= "ldb",
-	.interface_pix_fmt	= IPU_PIX_FMT_RGB666,
+	.interface_pix_fmt	= IPU_PIX_FMT_RGB24,
 	.mode_str		= "LDB-XGA",
-	.default_bpp		= 16,
+	.default_bpp		= 24,
 	.int_clk		= false,
 	}, {
 	.disp_dev		= "mipi_dsi",
@@ -2075,12 +2078,73 @@ static int __init early_disable_mipi_dsi(char *p)
 
 early_param("disable_mipi_dsi", early_disable_mipi_dsi);
 
+static void mx6_arm2_init_panel(void)
+{
+	int i;
+
+	/*
+	 * init (TFP410) DVI transmitter
+	 * TODO:
+	 * handle display detection via MX6_ARM2_DVIT_MSEN
+	 */
+	gpio_request(MX6_ARM2_DVIT_nPD, "dvi-trans-pwrdown");
+	gpio_request(MX6_ARM2_DVIT_MSEN, "dvi-trans-disp-detected");
+	gpio_direction_output(MX6_ARM2_DVIT_nPD, 1);
+	gpio_direction_input(MX6_ARM2_DVIT_MSEN);
+
+
+	/*
+	 * A word of explanation: 
+	 * MIPI DSI:	Display Serial Interface 
+	 * MIPI CSI:	Camera Serial Interface 
+	 */ 
+//	imx6q_add_mipi_csi2(&mipi_csi2_pdata);
+	imx6q_add_mxc_hdmi_core(&hdmi_core_data);
+
+	imx6q_add_ipuv3(0, &ipu_data[0]);
+	if (cpu_is_mx6q())
+		imx6q_add_ipuv3(1, &ipu_data[1]);
+
+	if (cpu_is_mx6dl()) {
+//		mipi_dsi_pdata.ipu_id = 0;
+//		mipi_dsi_pdata.disp_id = 1;
+		ldb_data.ipu_id = 0;
+		ldb_data.disp_id = 0;
+		for (i = 0; i < ARRAY_SIZE(sabr_fb_data) / 2; i++)
+			imx6q_add_ipuv3fb(i, &sabr_fb_data[i]);
+	} else {
+		for (i = 0; i < ARRAY_SIZE(sabr_fb_data); i++)
+			imx6q_add_ipuv3fb(i, &sabr_fb_data[i]);
+	}
+
+//	if (!disable_mipi_dsi)
+//		imx6q_add_mipi_dsi(&mipi_dsi_pdata);
+	imx6q_add_vdoa();
+	imx6q_add_lcdif(&lcdif_data);
+	imx6q_add_ldb(&ldb_data);
+	imx6q_add_v4l2_output(0);
+//	imx6q_add_v4l2_capture(0, &capture_data[0]);
+//	imx6q_add_v4l2_capture(1, &capture_data[1]);
+
+
+//	/* DISP0 Reset - Assert for i2c disabled mode */
+//	gpio_request(MX6_ARM2_DISP0_RESET, "disp0-reset");
+//	gpio_direction_output(MX6_ARM2_DISP0_RESET, 0);
+//
+//	/* DISP0 I2C enable */
+//	if (!disable_mipi_dsi) {
+//		gpio_request(MX6_ARM2_DISP0_I2C_EN, "disp0-i2c");
+//		gpio_direction_output(MX6_ARM2_DISP0_I2C_EN, 0);
+//	}
+//	gpio_request(MX6_ARM2_DISP0_PWR, "disp0-pwr");
+//	gpio_direction_output(MX6_ARM2_DISP0_PWR, 1);
+}
+
 /*!
  * Board specific initialization.
  */
 static void __init mx6_arm2_init(void)
 {
-	int i;
 	int ret;
 
 	iomux_v3_cfg_t *common_pads = NULL;
@@ -2172,35 +2236,7 @@ static void __init mx6_arm2_init(void)
 	soc_reg_id = arm2_dvfscore_data.soc_id;
 	pu_reg_id = arm2_dvfscore_data.pu_id;
 	mx6_arm2_init_uart();
-
-
-	imx6q_add_mipi_csi2(&mipi_csi2_pdata);
-	imx6q_add_mxc_hdmi_core(&hdmi_core_data);
-
-	imx6q_add_ipuv3(0, &ipu_data[0]);
-	if (cpu_is_mx6q())
-		imx6q_add_ipuv3(1, &ipu_data[1]);
-
-	if (cpu_is_mx6dl()) {
-		mipi_dsi_pdata.ipu_id = 0;
-		mipi_dsi_pdata.disp_id = 1;
-		ldb_data.ipu_id = 0;
-		ldb_data.disp_id = 0;
-		for (i = 0; i < ARRAY_SIZE(sabr_fb_data) / 2; i++)
-			imx6q_add_ipuv3fb(i, &sabr_fb_data[i]);
-	} else {
-		for (i = 0; i < ARRAY_SIZE(sabr_fb_data); i++)
-			imx6q_add_ipuv3fb(i, &sabr_fb_data[i]);
-	}
-
-	if (!disable_mipi_dsi)
-		imx6q_add_mipi_dsi(&mipi_dsi_pdata);
-	imx6q_add_vdoa();
-	imx6q_add_lcdif(&lcdif_data);
-	imx6q_add_ldb(&ldb_data);
-	imx6q_add_v4l2_output(0);
-	imx6q_add_v4l2_capture(0, &capture_data[0]);
-	imx6q_add_v4l2_capture(1, &capture_data[1]);
+	mx6_arm2_init_panel();
 
 	imx6q_add_imx_snvs_rtc();
 
@@ -2252,20 +2288,8 @@ static void __init mx6_arm2_init(void)
 	imx_asrc_data.asrc_audio_clk = clk_get(NULL, "asrc_serial_clk");
 	imx6q_add_asrc(&imx_asrc_data);
 
-	/* DISP0 Reset - Assert for i2c disabled mode */
-	gpio_request(MX6_ARM2_DISP0_RESET, "disp0-reset");
-	gpio_direction_output(MX6_ARM2_DISP0_RESET, 0);
-
-	/* DISP0 I2C enable */
-	if (!disable_mipi_dsi) {
-		gpio_request(MX6_ARM2_DISP0_I2C_EN, "disp0-i2c");
-		gpio_direction_output(MX6_ARM2_DISP0_I2C_EN, 0);
-	}
-	gpio_request(MX6_ARM2_DISP0_PWR, "disp0-pwr");
-	gpio_direction_output(MX6_ARM2_DISP0_PWR, 1);
-
-	gpio_request(MX6_ARM2_LDB_BACKLIGHT, "ldb-backlight");
-	gpio_direction_output(MX6_ARM2_LDB_BACKLIGHT, 1);
+//	gpio_request(MX6_ARM2_LDB_BACKLIGHT, "ldb-backlight");
+//	gpio_direction_output(MX6_ARM2_LDB_BACKLIGHT, 1);
 	imx6q_add_otp();
 	imx6q_add_viim();
 	imx6q_add_imx2_wdt(0, NULL);
