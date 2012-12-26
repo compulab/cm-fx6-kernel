@@ -54,8 +54,8 @@ static iomux_v3_cfg_t mx6q_arm2_pads[] = {
 #endif
 #endif
 	/* MCLK for csi0 */
-	MX6Q_PAD_GPIO_0__CCM_CLKO,
-	MX6Q_PAD_GPIO_3__CCM_CLKO2,
+//	MX6Q_PAD_GPIO_0__CCM_CLKO,
+//	MX6Q_PAD_GPIO_3__CCM_CLKO2,
 
 	/* SD1-- SD-card -- mutually exclusive with Wi-Fi hardware */
 	MX6Q_PAD_SD1_CLK__USDHC1_CLK,
@@ -134,6 +134,10 @@ static iomux_v3_cfg_t mx6q_arm2_pads[] = {
 	MX6Q_PAD_KEY_COL3__I2C2_SCL,
 	MX6Q_PAD_KEY_ROW3__I2C2_SDA,
 
+	/* I2C3 */
+	MX6Q_PAD_GPIO_3__I2C3_SCL,
+	MX6Q_PAD_GPIO_6__I2C3_SDA,
+
 	/* DISPLAY */
 	MX6Q_PAD_DI0_DISP_CLK__IPU1_DI0_DISP_CLK,
 	MX6Q_PAD_DI0_PIN15__IPU1_DI0_PIN15,
@@ -193,10 +197,12 @@ static iomux_v3_cfg_t mx6q_arm2_pads[] = {
 	/* USBOTG ID pin */
 	MX6Q_PAD_GPIO_1__USBOTG_ID,
 
+#if 0
 	/* MLB150 */
 	MX6Q_PAD_GPIO_3__MLB_MLBCLK,
 	MX6Q_PAD_GPIO_6__MLB_MLBSIG,
 	MX6Q_PAD_GPIO_2__MLB_MLBDAT,
+#endif
 
 	/* iSSD SATA drive */
 	MX6Q_PAD_ENET_TX_EN__GPIO_1_28,
@@ -208,11 +214,6 @@ static iomux_v3_cfg_t mx6q_arm2_pads[] = {
 	MX6Q_PAD_EIM_D23__GPIO_3_23,
 	MX6Q_PAD_EIM_D29__GPIO_3_29,
 	MX6Q_PAD_EIM_BCLK__GPIO_6_31
-};
-
-static iomux_v3_cfg_t mx6q_arm2_i2c3_pads[] = {
-	MX6Q_PAD_GPIO_5__I2C3_SCL,
-	MX6Q_PAD_GPIO_16__I2C3_SDA,
 };
 
 static iomux_v3_cfg_t mx6q_arm2_spdif_pads[] = {
@@ -241,7 +242,7 @@ static iomux_v3_cfg_t mx6q_arm2_esai_record_pads[] = {
 };
 
 static iomux_v3_cfg_t mx6q_arm2_csi0_sensor_pads[] = {
-	MX6Q_PAD_GPIO_0__CCM_CLKO,
+//	MX6Q_PAD_GPIO_0__CCM_CLKO,
 	/* ipu1 csi0 */
 	MX6Q_PAD_CSI0_DAT12__IPU1_CSI0_D_12,
 	MX6Q_PAD_CSI0_DAT13__IPU1_CSI0_D_13,

@@ -33,6 +33,7 @@
 #include <linux/spi/flash.h>
 #include <linux/i2c.h>
 #include <linux/i2c/pca953x.h>
+#include <linux/i2c/at24.h>
 #include <linux/ata.h>
 #include <linux/mtd/mtd.h>
 #include <linux/mtd/map.h>
@@ -859,6 +860,35 @@ static struct fsl_mxc_lcd_platform_data sii902x_hdmi_data = {
 	.put_pins = sii902x_put_pins,
 };
 
+static void mx6q_arm2_read_eeprom(struct memory_accessor *a, void *context)
+{
+	int ret;
+	char outbuff[] = "compulab";
+	char inbuff[24];
+
+	ret = a->write(a, outbuff, 0, 9);
+	if (ret < 0) {
+		pr_err("%s: could not write EEPROM: %d \n", __FUNCTION__, ret);
+		//return;
+	}
+
+	ret = a->read(a, inbuff, 0, 9);
+	inbuff[8] = '\0';	// against evil eye
+	if (ret < 0) {
+		pr_err("%s: could not read EEPROM: %d \n", __FUNCTION__, ret);
+		return;
+	}
+	pr_info("%s: read EEPROM: %s \n", __FUNCTION__, inbuff);
+}
+
+static struct at24_platform_data eeprom_24c02 = {
+	.byte_len	= 256,
+	.page_size	= 8,
+	.flags		= AT24_FLAG_IRUGO,
+	.setup		= mx6q_arm2_read_eeprom,
+	.context	= NULL,
+};
+
 static struct i2c_board_info mxc_i2c0_board_info[] __initdata = {
 	{
 		I2C_BOARD_INFO("cs42888", 0x48),
@@ -881,10 +911,11 @@ static struct imxi2c_platform_data mx6_arm2_i2c1_data = {
 };
 
 static struct imxi2c_platform_data mx6_arm2_i2c2_data = {
-	.bitrate = 400000,
+	.bitrate = 100000/*400000*/,
 };
 
 static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
+#if 0
 	{
 		I2C_BOARD_INFO("max17135", 0x48),
 		.platform_data = &max17135_pdata,
@@ -909,6 +940,12 @@ static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
 		I2C_BOARD_INFO("sii902x", 0x39),
 		.platform_data = &sii902x_hdmi_data,
 		.irq = gpio_to_irq(MX6_ARM2_DISP0_DET_INT),
+	},
+#endif
+	{
+		/* 24c02 eeprom */
+		I2C_BOARD_INFO("24c02", 0x50),
+		.platform_data = &eeprom_24c02,
 	},
 };
 
@@ -2066,14 +2103,12 @@ static void __init mx6_arm2_init(void)
 	iomux_v3_cfg_t *esai_rec_pads = NULL;
 	iomux_v3_cfg_t *spdif_pads = NULL;
 	iomux_v3_cfg_t *flexcan_pads = NULL;
-	iomux_v3_cfg_t *i2c3_pads = NULL;
 	iomux_v3_cfg_t *epdc_pads = NULL;
 
 	int common_pads_cnt;
 	int esai_rec_pads_cnt;
 	int spdif_pads_cnt;
 	int flexcan_pads_cnt;
-	int i2c3_pads_cnt;
 	int epdc_pads_cnt;
 
 
@@ -2087,26 +2122,22 @@ static void __init mx6_arm2_init(void)
 		esai_rec_pads = mx6q_arm2_esai_record_pads;
 		spdif_pads = mx6q_arm2_spdif_pads;
 		flexcan_pads = mx6q_arm2_can_pads;
-		i2c3_pads = mx6q_arm2_i2c3_pads;
 
 		common_pads_cnt = ARRAY_SIZE(mx6q_arm2_pads);
 		esai_rec_pads_cnt = ARRAY_SIZE(mx6q_arm2_esai_record_pads);
 		spdif_pads_cnt =  ARRAY_SIZE(mx6q_arm2_spdif_pads);
 		flexcan_pads_cnt = ARRAY_SIZE(mx6q_arm2_can_pads);
-		i2c3_pads_cnt = ARRAY_SIZE(mx6q_arm2_i2c3_pads);
 	} else if (cpu_is_mx6dl()) {
 		common_pads = mx6dl_arm2_pads;
 		esai_rec_pads = mx6dl_arm2_esai_record_pads;
 		spdif_pads = mx6dl_arm2_spdif_pads;
 		flexcan_pads = mx6dl_arm2_can_pads;
-		i2c3_pads = mx6dl_arm2_i2c3_pads;
 		epdc_pads = mx6dl_arm2_epdc_pads;
 
 		common_pads_cnt = ARRAY_SIZE(mx6dl_arm2_pads);
 		esai_rec_pads_cnt = ARRAY_SIZE(mx6dl_arm2_esai_record_pads);
 		spdif_pads_cnt =  ARRAY_SIZE(mx6dl_arm2_spdif_pads);
 		flexcan_pads_cnt = ARRAY_SIZE(mx6dl_arm2_can_pads);
-		i2c3_pads_cnt = ARRAY_SIZE(mx6dl_arm2_i2c3_pads);
 		epdc_pads_cnt = ARRAY_SIZE(mx6dl_arm2_epdc_pads);
 	}
 
@@ -2129,9 +2160,6 @@ static void __init mx6_arm2_init(void)
 	if (spdif_en) {
 		BUG_ON(!spdif_pads);
 		mxc_iomux_v3_setup_multiple_pads(spdif_pads, spdif_pads_cnt);
-	} else {
-		BUG_ON(!i2c3_pads);
-		mxc_iomux_v3_setup_multiple_pads(i2c3_pads, i2c3_pads_cnt);
 	}
 #else
 	/* Set GPIO_16 input for IEEE-1588 ts_clk and RMII reference clock
@@ -2196,17 +2224,20 @@ static void __init mx6_arm2_init(void)
 
 	imx6q_add_imx_i2c(0, &mx6_arm2_i2c0_data);
 	imx6q_add_imx_i2c(1, &mx6_arm2_i2c1_data);
-	i2c_register_board_info(0, mxc_i2c0_board_info,
-			ARRAY_SIZE(mxc_i2c0_board_info));
-	i2c_register_board_info(1, mxc_i2c1_board_info,
-			ARRAY_SIZE(mxc_i2c1_board_info));
-	if (!spdif_en) {
-		if (disable_mipi_dsi)
-			mx6_arm2_i2c2_data.bitrate = 100000;
-		imx6q_add_imx_i2c(2, &mx6_arm2_i2c2_data);
-		i2c_register_board_info(2, mxc_i2c2_board_info,
+//	i2c_register_board_info(0, mxc_i2c0_board_info,
+//			ARRAY_SIZE(mxc_i2c0_board_info));
+//	i2c_register_board_info(1, mxc_i2c1_board_info,
+//			ARRAY_SIZE(mxc_i2c1_board_info));
+//	if (!spdif_en) {
+//		if (disable_mipi_dsi)
+//			mx6_arm2_i2c2_data.bitrate = 100000;
+//		imx6q_add_imx_i2c(2, &mx6_arm2_i2c2_data);
+//		i2c_register_board_info(2, mxc_i2c2_board_info,
+//				ARRAY_SIZE(mxc_i2c2_board_info));
+//	}
+	imx6q_add_imx_i2c(2, &mx6_arm2_i2c2_data);
+	i2c_register_board_info(2, mxc_i2c2_board_info,
 				ARRAY_SIZE(mxc_i2c2_board_info));
-	}
 
 	/* SPI */
 	imx6q_add_ecspi(0, &mx6_arm2_spi_data);
