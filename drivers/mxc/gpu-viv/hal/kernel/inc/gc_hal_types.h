@@ -146,6 +146,7 @@ typedef unsigned char           gctUINT8;
 typedef unsigned short          gctUINT16;
 typedef unsigned int            gctUINT32;
 typedef unsigned long long      gctUINT64;
+typedef unsigned long           gctUINTPTR_T;
 
 typedef gctUINT *               gctUINT_PTR;
 typedef gctUINT8 *              gctUINT8_PTR;
@@ -284,6 +285,8 @@ typedef enum _gceSTATUS
     gcvSTATUS_NOT_SUPPORT_DITHER    =   17,
 	gcvSTATUS_EXECUTED				=	18,
     gcvSTATUS_TERMINATE             =   19,
+
+    gcvSTATUS_CONVERT_TO_SINGLE_STREAM    =   20,
 
     gcvSTATUS_INVALID_ARGUMENT      =   -1,
     gcvSTATUS_INVALID_OBJECT        =   -2,
@@ -887,6 +890,12 @@ gceSTATUS;
     gcmPTR2INT(& (((struct s *) 0)->field)) \
 )
 
+#define gcmSWAB32(x) ((gctUINT32)( \
+        (((gctUINT32)(x) & (gctUINT32)0x000000FFUL) << 24) | \
+        (((gctUINT32)(x) & (gctUINT32)0x0000FF00UL) << 8)  | \
+        (((gctUINT32)(x) & (gctUINT32)0x00FF0000UL) >> 8)  | \
+        (((gctUINT32)(x) & (gctUINT32)0xFF000000UL) >> 24)))
+
 /*******************************************************************************
 ***** Database ****************************************************************/
 
@@ -967,6 +976,25 @@ typedef struct _gcsHAL_FRAME_INFO
     OUT gctUINT                 txMissCount;
 }
 gcsHAL_FRAME_INFO;
+
+#if gcdLINK_QUEUE_SIZE
+typedef struct _gckLINKDATA * gckLINKDATA;
+struct _gckLINKDATA
+{
+    gctUINT32                   start;
+    gctUINT32                   end;
+    gctINT                      pid;
+};
+
+typedef struct _gckLINKQUEUE * gckLINKQUEUE;
+struct _gckLINKQUEUE
+{
+    struct _gckLINKDATA         data[gcdLINK_QUEUE_SIZE];
+    gctUINT32                   rear;
+    gctUINT32                   front;
+    gctUINT32                   count;
+};
+#endif
 
 #ifdef __cplusplus
 }

@@ -146,6 +146,10 @@ typedef enum _gceFEATURE
 	gcvFEATURE_PE_DITHER_FIX,
     gcvFEATURE_2D_YUV_SEPARATE_STRIDE,
     gcvFEATURE_FRUSTUM_CLIP_FIX,
+    gcvFEATURE_TEXTURE_LINEAR,
+    gcvFEATURE_TEXTURE_YUV_ASSEMBLER,
+    gcvFEATURE_DYNAMIC_FREQUENCY_SCALING,
+    gcvFEATURE_BUGFIX15,
 }
 gceFEATURE;
 
@@ -209,9 +213,13 @@ typedef enum _gceSURF_TYPE
 #if gcdANDROID_UNALIGNED_LINEAR_COMPOSITION_ADJUST
     gcvSURF_FLIP           = 0x800, /* The Resolve Target the will been flip resolve from RT */
 #endif
+    gcvSURF_TILE_STATUS_DIRTY  = 0x1000, /* Init tile status to all dirty */
 
     gcvSURF_RENDER_TARGET_NO_TILE_STATUS = gcvSURF_RENDER_TARGET
                                          | gcvSURF_NO_TILE_STATUS,
+
+    gcvSURF_RENDER_TARGET_TS_DIRTY = gcvSURF_RENDER_TARGET
+                                         | gcvSURF_TILE_STATUS_DIRTY,
 
     gcvSURF_DEPTH_NO_TILE_STATUS         = gcvSURF_DEPTH
                                          | gcvSURF_NO_TILE_STATUS,
@@ -473,6 +481,17 @@ typedef enum _gceSURF_ALIGNMENT
 }
 gceSURF_ALIGNMENT;
 
+
+/* Surface Addressing. */
+typedef enum _gceSURF_ADDRESSING
+{
+    gcvSURF_NO_STRIDE_TILED = 0,
+    gcvSURF_NO_STRIDE_LINEAR,
+    gcvSURF_STRIDE_TILED,
+    gcvSURF_STRIDE_LINEAR
+}
+gceSURF_ADDRESSING;
+
 /* Transparency modes. */
 typedef enum _gce2D_TRANSPARENCY
 {
@@ -645,6 +664,12 @@ typedef enum _gce2D_QUERY
     gcv2D_QUERY_YUV_STRIDE_MAX_ALIGN,
 }
 gce2D_QUERY;
+
+typedef enum _gce2D_STATE
+{
+    gcv2D_STATE_SPECIAL_FILTER_MIRROR_MODE       = 1,
+}
+gce2D_STATE;
 
 #ifndef VIVANTE_NO_3D
 /* Texture functions. */

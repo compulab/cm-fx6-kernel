@@ -286,6 +286,21 @@ __RemoveRecordFromProcessDB(
 
     while (Record != gcvNULL)
     {
+        if (Record->info.command == gcvHAL_SIGNAL)
+        {
+            /* TODO: Find a better place to bind signal to hardware.*/
+            gcmkVERIFY_OK(gckOS_SignalSetHardware(Event->os,
+                        Record->info.u.Signal.signal,
+                        Event->kernel->hardware));
+        }
+
+        if (Record->fromKernel)
+        {
+            /* No need to check db if event is from kernel. */
+            Record = Record->next;
+            continue;
+        }
+
         switch (Record->info.command)
         {
         case gcvHAL_FREE_NON_PAGED_MEMORY:
@@ -328,6 +343,14 @@ __RemoveRecordFromProcessDB(
                 Record->info.u.UnmapUserMemory.info));
             break;
 
+        case gcvHAL_FREE_VIRTUAL_COMMAND_BUFFER:
+            gcmkVERIFY_OK(gckKERNEL_RemoveProcessDB(
+                Event->kernel,
+                Record->processID,
+                gcvDB_COMMAND_BUFFER,
+                Record->info.u.FreeVirtualCommandBuffer.logical));
+            break;
+
         default:
             break;
         }
@@ -336,6 +359,15 @@ __RemoveRecordFromProcessDB(
     }
     gcmkFOOTER_NO();
     return gcvSTATUS_OK;
+}
+
+void
+_SubmitTimerFunction(
+    gctPOINTER Data
+    )
+{
+    gckEVENT event = (gckEVENT)Data;
+    gcmkVERIFY_OK(gckEVENT_Submit(event, gcvTRUE, gcvFALSE));
 }
 
 /******************************************************************************\
@@ -430,6 +462,11 @@ gckEVENT_Construct(
     gcmkONERROR(gckOS_AtomConstruct(os, &eventObj->pending));
 #endif
 
+    gcmkVERIFY_OK(gckOS_CreateTimer(os,
+                                    _SubmitTimerFunction,
+                                    (gctPOINTER)eventObj,
+                                    &eventObj->submitTimer));
+
     /* Return pointer to the gckEVENT object. */
     *Event = eventObj;
 
@@ -510,6 +547,12 @@ gckEVENT_Destroy(
 
     /* Verify the arguments. */
     gcmkVERIFY_OBJECT(Event, gcvOBJ_EVENT);
+
+    if (Event->submitTimer != gcvNULL)
+    {
+        gcmkVERIFY_OK(gckOS_StopTimer(Event->os, Event->submitTimer));
+        gcmkVERIFY_OK(gckOS_DestoryTimer(Event->os, Event->submitTimer));
+    }
 
     /* Delete the queue mutex. */
     gcmkVERIFY_OK(gckOS_DeleteMutex(Event->os, Event->eventQueueMutex));
@@ -723,11 +766,6 @@ gckEVENT_GetEvent(
                 __FUNCTION__, __LINE__
                 );
 
-            /* Broadcast GPU stuck. */
-            gcmkONERROR(gckOS_Broadcast(Event->os,
-                                        Event->kernel->hardware,
-                                        gcvBROADCAST_GPU_STUCK));
-
             /* Bail out. */
             gcmkONERROR(gcvSTATUS_GPU_NOT_RESPONDING);
         }
@@ -862,7 +900,8 @@ gckEVENT_AddList(
     IN gckEVENT Event,
     IN gcsHAL_INTERFACE_PTR Interface,
     IN gceKERNEL_WHERE FromWhere,
-    IN gctBOOL AllocateAllowed
+    IN gctBOOL AllocateAllowed,
+    IN gctBOOL FromKernel
     )
 {
     gceSTATUS status;
@@ -892,6 +931,7 @@ gckEVENT_AddList(
         || (Interface->command == gcvHAL_UNMAP_USER_MEMORY)
         || (Interface->command == gcvHAL_TIMESTAMP)
         || (Interface->command == gcvHAL_COMMIT_DONE)
+        || (Interface->command == gcvHAL_FREE_VIRTUAL_COMMAND_BUFFER)
         );
 
     /* Validate the source. */
@@ -906,6 +946,9 @@ gckEVENT_AddList(
 
     /* Termninate the record. */
     record->next = gcvNULL;
+
+    /* Record the committer. */
+    record->fromKernel = FromKernel;
 
     /* Copy the event interface into the record. */
     gcmkONERROR(gckOS_MemCopy(&record->info, Interface, gcmSIZEOF(record->info)));
@@ -960,6 +1003,31 @@ gckEVENT_AddList(
         queue->tail->next = record;
         queue->tail       = record;
     }
+
+    /* Unmap user space logical address.
+     * Linux kernel does not support unmap the memory of other process any more since 3.5.
+     * Let's unmap memory of self process before submit the event to gpu.
+     * */
+    switch(Interface->command)
+    {
+    case gcvHAL_FREE_NON_PAGED_MEMORY:
+        gcmkONERROR(gckOS_UnmapUserLogical(
+                        Event->os,
+                        Interface->u.FreeNonPagedMemory.physical,
+                        Interface->u.FreeNonPagedMemory.bytes,
+                        Interface->u.FreeNonPagedMemory.logical));
+        break;
+    case gcvHAL_FREE_CONTIGUOUS_MEMORY:
+        gcmkONERROR(gckOS_UnmapUserLogical(
+                        Event->os,
+                        Interface->u.FreeContiguousMemory.physical,
+                        Interface->u.FreeContiguousMemory.bytes,
+                        Interface->u.FreeContiguousMemory.logical));
+        break;
+    default:
+        break;
+    }
+
 
     /* Release the mutex. */
     gcmkONERROR(gckOS_ReleaseMutex(Event->os, Event->eventListMutex));
@@ -1035,7 +1103,7 @@ gckEVENT_Unlock(
     iface.u.UnlockVideoMemory.asynchroneous = 0;
 
     /* Append it to the queue. */
-    gcmkONERROR(gckEVENT_AddList(Event, &iface, FromWhere, gcvFALSE));
+    gcmkONERROR(gckEVENT_AddList(Event, &iface, FromWhere, gcvFALSE, gcvTRUE));
 
     /* Success. */
     gcmkFOOTER_NO();
@@ -1090,7 +1158,7 @@ gckEVENT_FreeVideoMemory(
     iface.u.FreeVideoMemory.node = VideoMemory;
 
     /* Append it to the queue. */
-    gcmkONERROR(gckEVENT_AddList(Event, &iface, FromWhere, gcvFALSE));
+    gcmkONERROR(gckEVENT_AddList(Event, &iface, FromWhere, gcvFALSE, gcvTRUE));
 
     /* Success. */
     gcmkFOOTER_NO();
@@ -1154,7 +1222,48 @@ gckEVENT_FreeNonPagedMemory(
     iface.u.FreeNonPagedMemory.logical  = Logical;
 
     /* Append it to the queue. */
-    gcmkONERROR(gckEVENT_AddList(Event, &iface, FromWhere, gcvFALSE));
+    gcmkONERROR(gckEVENT_AddList(Event, &iface, FromWhere, gcvFALSE, gcvTRUE));
+
+    /* Success. */
+    gcmkFOOTER_NO();
+    return gcvSTATUS_OK;
+
+OnError:
+    /* Return the status. */
+    gcmkFOOTER();
+    return status;
+}
+
+gceSTATUS
+gckEVENT_DestroyVirtualCommandBuffer(
+    IN gckEVENT Event,
+    IN gctSIZE_T Bytes,
+    IN gctPHYS_ADDR Physical,
+    IN gctPOINTER Logical,
+    IN gceKERNEL_WHERE FromWhere
+    )
+{
+    gceSTATUS status;
+    gcsHAL_INTERFACE iface;
+
+    gcmkHEADER_ARG("Event=0x%x Bytes=%lu Physical=0x%x Logical=0x%x "
+                   "FromWhere=%d",
+                   Event, Bytes, Physical, Logical, FromWhere);
+
+    /* Verify the arguments. */
+    gcmkVERIFY_OBJECT(Event, gcvOBJ_EVENT);
+    gcmkVERIFY_ARGUMENT(Physical != gcvNULL);
+    gcmkVERIFY_ARGUMENT(Logical != gcvNULL);
+    gcmkVERIFY_ARGUMENT(Bytes > 0);
+
+    /* Create an event. */
+    iface.command = gcvHAL_FREE_VIRTUAL_COMMAND_BUFFER;
+    iface.u.FreeVirtualCommandBuffer.bytes    = Bytes;
+    iface.u.FreeVirtualCommandBuffer.physical = Physical;
+    iface.u.FreeVirtualCommandBuffer.logical  = Logical;
+
+    /* Append it to the queue. */
+    gcmkONERROR(gckEVENT_AddList(Event, &iface, FromWhere, gcvFALSE, gcvTRUE));
 
     /* Success. */
     gcmkFOOTER_NO();
@@ -1218,7 +1327,7 @@ gckEVENT_FreeContiguousMemory(
     iface.u.FreeContiguousMemory.logical  = Logical;
 
     /* Append it to the queue. */
-    gcmkONERROR(gckEVENT_AddList(Event, &iface, FromWhere, gcvFALSE));
+    gcmkONERROR(gckEVENT_AddList(Event, &iface, FromWhere, gcvFALSE, gcvTRUE));
 
     /* Success. */
     gcmkFOOTER_NO();
@@ -1279,7 +1388,7 @@ gckEVENT_Signal(
     iface.u.Signal.process   = gcvNULL;
 
     /* Append it to the queue. */
-    gcmkONERROR(gckEVENT_AddList(Event, &iface, FromWhere, gcvFALSE));
+    gcmkONERROR(gckEVENT_AddList(Event, &iface, FromWhere, gcvFALSE, gcvTRUE));
 
     /* Success. */
     gcmkFOOTER_NO();
@@ -1326,7 +1435,7 @@ gckEVENT_CommitDone(
     iface.command = gcvHAL_COMMIT_DONE;
 
     /* Append it to the queue. */
-    gcmkONERROR(gckEVENT_AddList(Event, &iface, FromWhere, gcvFALSE));
+    gcmkONERROR(gckEVENT_AddList(Event, &iface, FromWhere, gcvFALSE, gcvTRUE));
 
     /* Success. */
     gcmkFOOTER_NO();
@@ -1494,6 +1603,14 @@ OnError:
         Event->queues[id].head = gcvNULL;
     }
 
+    if (status == gcvSTATUS_GPU_NOT_RESPONDING)
+    {
+        /* Broadcast GPU stuck. */
+        status = gckOS_Broadcast(Event->os,
+                                 Event->kernel->hardware,
+                                 gcvBROADCAST_GPU_STUCK);
+    }
+
     /* Return the status. */
     gcmkFOOTER();
     return status;
@@ -1570,7 +1687,7 @@ gckEVENT_Commit(
 
         /* Append event record to event queue. */
         gcmkONERROR(
-            gckEVENT_AddList(Event, &record->iface, gcvKERNEL_PIXEL, gcvTRUE));
+            gckEVENT_AddList(Event, &record->iface, gcvKERNEL_PIXEL, gcvTRUE, gcvFALSE));
 
         /* Next record in the queue. */
         next = record->next;
@@ -2327,6 +2444,17 @@ gckEVENT_Notify(
                 }
                 break;
 
+#if gcdVIRTUAL_COMMAND_BUFFER
+             case gcvHAL_FREE_VIRTUAL_COMMAND_BUFFER:
+                 gcmkVERIFY_OK(
+                     gckKERNEL_DestroyVirtualCommandBuffer(Event->kernel,
+                         record->info.u.FreeVirtualCommandBuffer.bytes,
+                         record->info.u.FreeVirtualCommandBuffer.physical,
+                         record->info.u.FreeVirtualCommandBuffer.logical
+                         ));
+                 break;
+#endif
+
             case gcvHAL_COMMIT_DONE:
                 break;
 
@@ -2658,6 +2786,11 @@ _PrintRecord(
 
     case gcvHAL_COMMIT_DONE:
         gcmkPRINT("      gcvHAL_COMMIT_DONE");
+        break;
+
+    case gcvHAL_FREE_VIRTUAL_COMMAND_BUFFER:
+        gcmkPRINT("      gcvHAL_FREE_VIRTUAL_COMMAND_BUFFER logical=0x%08x",
+                  record->info.u.FreeVirtualCommandBuffer.logical);
         break;
 
     default:

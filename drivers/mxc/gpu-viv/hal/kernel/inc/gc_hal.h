@@ -30,6 +30,9 @@
 #include "gc_hal_base.h"
 #include "gc_hal_profiler.h"
 #include "gc_hal_driver.h"
+#ifndef VIVANTE_NO_3D
+#include "gc_hal_statistics.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -46,7 +49,7 @@ extern "C" {
 
 #define gcmALIGN_BASE(n, align) \
 ( \
-    (n) & ~((align) - 1) \
+    ((n) & ~((align) - 1)) \
 )
 
 /******************************************************************************\
@@ -503,6 +506,17 @@ gckOS_UnmapMemory(
     IN gctPOINTER Logical
     );
 
+/* Unmap user logical memory out of physical memory.
+ * This function is only supported in Linux currently.
+ */
+gceSTATUS
+gckOS_UnmapUserLogical(
+    IN gckOS Os,
+    IN gctPHYS_ADDR Physical,
+    IN gctSIZE_T Bytes,
+    IN gctPOINTER Logical
+    );
+
 /* Create a new mutex. */
 gceSTATUS
 gckOS_CreateMutex(
@@ -565,10 +579,18 @@ gckOS_AtomClearMask(
 #endif
 
 gceSTATUS
-gckOS_DumpGPUState(
-    IN gckOS Os,
-    IN gceCORE Core
+gckOS_DumpCallStack(
+    IN gckOS Os
     );
+
+gceSTATUS
+gckOS_GetProcessNameByPid(
+    IN gctINT Pid,
+    IN gctSIZE_T Length,
+    OUT gctUINT8_PTR String
+    );
+
+
 
 /*******************************************************************************
 **
@@ -1950,6 +1972,22 @@ gckHARDWARE_QueryPowerManagementState(
     OUT gceCHIPPOWERSTATE* State
     );
 
+#if gcdENABLE_FSCALE_VAL_ADJUST
+gceSTATUS
+gckHARDWARE_SetFscaleValue(
+    IN gckHARDWARE Hardware,
+    IN gctUINT32   FscaleValue
+    );
+
+gceSTATUS
+gckHARDWARE_GetFscaleValue(
+    IN gckHARDWARE Hardware,
+    IN gctUINT * FscaleValue,
+    IN gctUINT * MinFscaleValue,
+    IN gctUINT * MaxFscaleValue
+    );
+#endif
+
 #if gcdPOWEROFF_TIMEOUT
 gceSTATUS
 gckHARDWARE_SetPowerOffTimeout(
@@ -2012,6 +2050,11 @@ gckHARDWARE_IsFeatureAvailable(
 
 gceSTATUS
 gckHARDWARE_DumpMMUException(
+    IN gckHARDWARE Hardware
+    );
+
+gceSTATUS
+gckHARDWARE_DumpGPUState(
     IN gckHARDWARE Hardware
     );
 
@@ -2084,7 +2127,8 @@ gckEVENT_AddList(
     IN gckEVENT Event,
     IN gcsHAL_INTERFACE_PTR Interface,
     IN gceKERNEL_WHERE FromWhere,
-    IN gctBOOL AllocateAllowed
+    IN gctBOOL AllocateAllowed,
+    IN gctBOOL FromKernel
     );
 
 /* Schedule a FreeNonPagedMemory event. */
@@ -2137,6 +2181,18 @@ gckEVENT_CommitDone(
     IN gckEVENT Event,
     IN gceKERNEL_WHERE FromWhere
     );
+
+#if gcdVIRTUAL_COMMAND_BUFFER
+/* Schedule a FreeVirtualCommandBuffer event. */
+gceSTATUS
+gckEVENT_DestroyVirtualCommandBuffer(
+    IN gckEVENT Event,
+    IN gctSIZE_T Bytes,
+    IN gctPHYS_ADDR Physical,
+    IN gctPOINTER Logical,
+    IN gceKERNEL_WHERE FromWhere
+    );
+#endif
 
 gceSTATUS
 gckEVENT_Submit(
@@ -2273,6 +2329,13 @@ gckCOMMAND_Detach(
     IN gckCONTEXT Context
     );
 
+#if gcdVIRTUAL_COMMAND_BUFFER
+gceSTATUS
+gckCOMMAND_DumpExecutingBuffer(
+    IN gckCOMMAND Command
+    );
+#endif
+
 /******************************************************************************\
 ********************************* gckMMU Object ********************************
 \******************************************************************************/
@@ -2352,16 +2415,35 @@ gckMMU_Flush(
     IN gckMMU Mmu
     );
 
+gceSTATUS
+gckMMU_DumpPageTableEntry(
+    IN gckMMU Mmu,
+    IN gctUINT32 Address
+    );
+
 
 #if VIVANTE_PROFILER
 gceSTATUS
 gckHARDWARE_QueryProfileRegisters(
     IN gckHARDWARE Hardware,
+    IN gctBOOL   Clear,
     OUT gcsPROFILER_COUNTERS * Counters
     );
 #endif
 
+gceSTATUS
+gckOS_SignalQueryHardware(
+    IN gckOS Os,
+    IN gctSIGNAL Signal,
+    OUT gckHARDWARE * Hardware
+    );
 
+gceSTATUS
+gckOS_SignalSetHardware(
+    IN gckOS Os,
+    IN gctSIGNAL Signal,
+    gckHARDWARE Hardware
+    );
 
 #ifdef __cplusplus
 }

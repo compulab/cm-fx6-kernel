@@ -495,7 +495,7 @@ long drv_ioctl(
         }
 
         iface.u.ChipInfo.count = count;
-        status = gcvSTATUS_OK;
+        iface.status = status = gcvSTATUS_OK;
     }
     else
     {
@@ -650,7 +650,7 @@ static int drv_mmap(
         ret = io_remap_pfn_range(
             vma,
             vma->vm_start,
-            (gctUINT32) device->contiguousPhysical >> PAGE_SHIFT,
+            device->requestedContiguousBase >> PAGE_SHIFT,
             size,
             vma->vm_page_prot
             );

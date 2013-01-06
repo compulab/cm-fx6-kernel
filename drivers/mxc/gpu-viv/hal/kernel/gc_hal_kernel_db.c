@@ -1144,6 +1144,12 @@ gckKERNEL_DestroyProcessDB(
             break;
 
         case gcvDB_NON_PAGED:
+            /* Unmap user logical memory first. */
+            status = gckOS_UnmapUserLogical(Kernel->os,
+                                            record->physical,
+                                            record->bytes,
+                                            record->data);
+
             /* Free the non paged memory. */
             status = gckOS_FreeNonPagedMemory(Kernel->os,
                                               record->bytes,
@@ -1155,12 +1161,34 @@ gckKERNEL_DestroyProcessDB(
                            record->data, record->bytes, status);
             break;
 
+#if gcdVIRTUAL_COMMAND_BUFFER
+        case gcvDB_COMMAND_BUFFER:
+            /* Free the command buffer. */
+            status = gckEVENT_DestroyVirtualCommandBuffer(record->kernel->eventObj,
+                                                          record->bytes,
+                                                          record->physical,
+                                                          record->data,
+                                                          gcvKERNEL_PIXEL);
+
+            gcmkTRACE_ZONE(gcvLEVEL_WARNING, gcvZONE_DATABASE,
+                           "DB: COMMAND_BUFFER 0x%x, bytes=%lu (status=%d)",
+                           record->data, record->bytes, status);
+            break;
+#endif
+
         case gcvDB_CONTIGUOUS:
+            /* Unmap user logical memory first. */
+            status = gckOS_UnmapUserLogical(Kernel->os,
+                                            record->physical,
+                                            record->bytes,
+                                            record->data);
+
             /* Free the contiguous memory. */
-            status = gckOS_FreeContiguous(Kernel->os,
-                                          record->physical,
-                                          record->data,
-                                          record->bytes);
+            status = gckEVENT_FreeContiguousMemory(Kernel->eventObj,
+                                                   record->bytes,
+                                                   record->physical,
+                                                   record->data,
+                                                   gcvKERNEL_PIXEL);
 
             gcmkTRACE_ZONE(gcvLEVEL_WARNING, gcvZONE_DATABASE,
                            "DB: CONTIGUOUS 0x%x bytes=%lu (status=%d)",
@@ -1178,7 +1206,7 @@ gckKERNEL_DestroyProcessDB(
 
             gcmkTRACE_ZONE(gcvLEVEL_WARNING, gcvZONE_DATABASE,
                            "DB: SIGNAL %d (status=%d)",
-                           (gctINT) record->data, status);
+                           (gctINT)(gctUINTPTR_T)record->data, status);
             break;
 
         case gcvDB_VIDEO_MEMORY_LOCKED:
@@ -1421,3 +1449,48 @@ OnError:
     return status;
 }
 #endif
+
+gceSTATUS
+gckKERNEL_DumpProcessDB(
+    IN gckKERNEL Kernel
+    )
+{
+    gcsDATABASE_PTR database;
+    gctINT i, pid;
+    gctUINT8 name[24];
+
+    gcmkHEADER_ARG("Kernel=0x%x", Kernel);
+
+    /* Acquire the database mutex. */
+    gcmkVERIFY_OK(
+        gckOS_AcquireMutex(Kernel->os, Kernel->db->dbMutex, gcvINFINITE));
+
+    gcmkPRINT("**************************\n");
+    gcmkPRINT("***  PROCESS DB DUMP   ***\n");
+    gcmkPRINT("**************************\n");
+
+    gcmkPRINT_N(8, "%-8s%s\n", "PID", "NAME");
+    /* Walk the databases. */
+    for (i = 0; i < gcmCOUNTOF(Kernel->db->db); ++i)
+    {
+        for (database = Kernel->db->db[i];
+             database != gcvNULL;
+             database = database->next)
+        {
+            pid = database->processID;
+
+            gcmkVERIFY_OK(gckOS_ZeroMemory(name, gcmSIZEOF(name)));
+
+            gcmkVERIFY_OK(gckOS_GetProcessNameByPid(pid, gcmSIZEOF(name), name));
+
+            gcmkPRINT_N(8, "%-8d%s\n", pid, name);
+        }
+    }
+
+    /* Release the database mutex. */
+    gcmkVERIFY_OK(gckOS_ReleaseMutex(Kernel->os, Kernel->db->dbMutex));
+
+    /* Success. */
+    gcmkFOOTER_NO();
+    return gcvSTATUS_OK;
+}

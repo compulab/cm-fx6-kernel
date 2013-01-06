@@ -37,6 +37,8 @@ gceMMU_TYPE;
 
 #define gcdMMU_TABLE_DUMP       0
 
+#define gcdUSE_MMU_EXCEPTION    0
+
 /*
     gcdMMU_CLEAR_VALUE
 
@@ -77,6 +79,42 @@ gcsSharedPageTable;
 
 static gcsSharedPageTable_PTR sharedPageTable = gcvNULL;
 #endif
+
+#if gcdMIRROR_PAGETABLE
+typedef struct _gcsMirrorPageTable * gcsMirrorPageTable_PTR;
+typedef struct _gcsMirrorPageTable
+{
+    /* gckMMU objects. */
+    gckMMU          mmus[gcdMAX_GPU_COUNT];
+
+    /* Hardwares which use this shared pagetable. */
+    gckHARDWARE     hardwares[gcdMAX_GPU_COUNT];
+
+    /* Number of cores use this shared pagetable. */
+    gctUINT32       reference;
+}
+gcsMirrorPageTable;
+
+static gcsMirrorPageTable_PTR mirrorPageTable = gcvNULL;
+static gctPOINTER mirrorPageTableMutex = gcvNULL;
+#endif
+
+static gceSTATUS
+_FillPageTable(
+    IN gctUINT32_PTR PageTable,
+    IN gctUINT32     PageCount,
+    IN gctUINT32     EntryValue
+)
+{
+    gctUINT i;
+
+    for (i = 0; i < PageCount; i++)
+    {
+        PageTable[i] = EntryValue;
+    }
+
+    return gcvSTATUS_OK;
+}
 
 static gceSTATUS
 _Link(
@@ -444,9 +482,16 @@ _SetupDynamicSpace(
                 &Mmu->pageTablePhysical,
                 (gctPOINTER)&Mmu->pageTableLogical));
 
+#if gcdUSE_MMU_EXCEPTION
+    gcmkONERROR(_FillPageTable(Mmu->pageTableLogical,
+                               Mmu->pageTableEntries,
+                               /* Enable exception */
+                               1 << 1));
+#else
     /* Invalidate all entries. */
     gcmkONERROR(gckOS_ZeroMemory(Mmu->pageTableLogical,
                 Mmu->pageTableSize));
+#endif
 
     /* Initilization. */
     pageTable      = Mmu->pageTableLogical;
@@ -856,6 +901,47 @@ OnError:
 
     gcmkFOOTER();
     return status;
+#elif gcdMIRROR_PAGETABLE
+    gceSTATUS status;
+    gctPOINTER pointer;
+
+    gcmkHEADER_ARG("Kernel=0x%08x", Kernel);
+
+    if (mirrorPageTable == gcvNULL)
+    {
+        gcmkONERROR(
+            gckOS_Allocate(Kernel->os,
+                           sizeof(struct _gcsMirrorPageTable),
+                           &pointer));
+        mirrorPageTable = pointer;
+
+        gcmkONERROR(
+            gckOS_ZeroMemory(mirrorPageTable,
+                    sizeof(struct _gcsMirrorPageTable)));
+
+        gcmkONERROR(
+            gckOS_CreateMutex(Kernel->os, &mirrorPageTableMutex));
+    }
+
+    gcmkONERROR(_Construct(Kernel, MmuSize, Mmu));
+
+    mirrorPageTable->mmus[mirrorPageTable->reference] = *Mmu;
+
+    mirrorPageTable->hardwares[mirrorPageTable->reference] = Kernel->hardware;
+
+    mirrorPageTable->reference++;
+
+    gcmkFOOTER_ARG("mirrorPageTable->reference=%lu", mirrorPageTable->reference);
+    return gcvSTATUS_OK;
+
+OnError:
+    if (mirrorPageTable && mirrorPageTable->reference == 0)
+    {
+        gcmkVERIFY_OK(gcmkOS_SAFE_FREE(Kernel->os, mirrorPageTable));
+    }
+
+    gcmkFOOTER();
+    return status;
 #else
     return _Construct(Kernel, MmuSize, Mmu);
 #endif
@@ -880,6 +966,16 @@ gckMMU_Destroy(
     }
 
     return gcvSTATUS_OK;
+#elif gcdMIRROR_PAGETABLE
+    mirrorPageTable->reference--;
+
+    if (mirrorPageTable->reference == 0)
+    {
+        gcmkVERIFY_OK(gcmkOS_SAFE_FREE(Mmu->os, mirrorPageTable));
+        gcmkVERIFY_OK(gcmkOS_SAFE_FREE(Mmu->os, mirrorPageTableMutex));
+    }
+
+    return _Destroy(Mmu);
 #else
     return _Destroy(Mmu);
 #endif
@@ -909,7 +1005,7 @@ gckMMU_Destroy(
 **          Pointer to a variable that receives the hardware specific address.
 */
 gceSTATUS
-gckMMU_AllocatePages(
+_AllocatePages(
     IN gckMMU Mmu,
     IN gctSIZE_T PageCount,
     OUT gctPOINTER * PageTable,
@@ -932,6 +1028,9 @@ gckMMU_AllocatePages(
 
     if (PageCount > Mmu->pageTableEntries)
     {
+        gcmkPRINT("[galcore]: %s(%d): Run out of free page entry.",
+                  __FUNCTION__, __LINE__);
+
         /* Not enough pages avaiable. */
         gcmkONERROR(gcvSTATUS_OUT_OF_RESOURCES);
     }
@@ -993,6 +1092,9 @@ gckMMU_AllocatePages(
             }
             else
             {
+                gcmkPRINT("[galcore]: %s(%d): Run out of free page entry.",
+                          __FUNCTION__, __LINE__);
+
                 /* Out of resources. */
                 gcmkONERROR(gcvSTATUS_OUT_OF_RESOURCES);
             }
@@ -1036,7 +1138,7 @@ gckMMU_AllocatePages(
     }
 
     /* Mark node as used. */
-    pageTable[index] = gcvMMU_USED;
+    gcmkONERROR(_FillPageTable(&pageTable[index], PageCount, gcvMMU_USED));
 
     /* Return pointer to page table. */
     *PageTable = &pageTable[index];
@@ -1105,13 +1207,15 @@ OnError:
 **      Nothing.
 */
 gceSTATUS
-gckMMU_FreePages(
+_FreePages(
     IN gckMMU Mmu,
     IN gctPOINTER PageTable,
     IN gctSIZE_T PageCount
     )
 {
     gctUINT32_PTR pageTable;
+    gceSTATUS status;
+    gctBOOL acquired = gcvFALSE;
 
     gcmkHEADER_ARG("Mmu=0x%x PageTable=0x%x PageCount=%lu",
                    Mmu, PageTable, PageCount);
@@ -1124,7 +1228,11 @@ gckMMU_FreePages(
     /* Convert the pointer. */
     pageTable = (gctUINT32_PTR) PageTable;
 
+    gcmkONERROR(gckOS_AcquireMutex(Mmu->os, Mmu->pageTableMutex, gcvINFINITE));
+    acquired = gcvTRUE;
+
 #if gcdMMU_CLEAR_VALUE
+    if (Mmu->hardware->mmuVersion == 0)
     {
         gctUINT32 i;
 
@@ -1138,21 +1246,132 @@ gckMMU_FreePages(
     if (PageCount == 1)
     {
         /* Single page node. */
-        pageTable[0] = (~((1U<<8)-1)) | gcvMMU_SINGLE;
+        pageTable[0] = (~((1U<<8)-1)) | gcvMMU_SINGLE
+#if gcdUSE_MMU_EXCEPTION
+                     /* Enable exception */
+                     | (1 << 1)
+#endif
+                     ;
     }
     else
     {
         /* Mark the node as free. */
-        pageTable[0] = (PageCount << 8) | gcvMMU_FREE;
+        pageTable[0] = (PageCount << 8) | gcvMMU_FREE
+#if gcdUSE_MMU_EXCEPTION
+                     /* Enable exception */
+                     | (1 << 1)
+#endif
+                     ;
         pageTable[1] = ~0U;
+
+#if gcdUSE_MMU_EXCEPTION
+        /* Enable exception */
+        gcmkVERIFY_OK(_FillPageTable(pageTable + 2, PageCount - 2, 1 << 1));
+#endif
     }
 
     /* We have free nodes. */
     Mmu->freeNodes = gcvTRUE;
 
+    gcmkVERIFY_OK(gckOS_ReleaseMutex(Mmu->os, Mmu->pageTableMutex));
+    acquired = gcvFALSE;
+
     /* Success. */
     gcmkFOOTER_NO();
     return gcvSTATUS_OK;
+
+OnError:
+    if (acquired)
+    {
+        gcmkVERIFY_OK(gckOS_ReleaseMutex(Mmu->os, Mmu->pageTableMutex));
+    }
+
+    gcmkFOOTER();
+    return status;
+}
+
+gceSTATUS
+gckMMU_AllocatePages(
+    IN gckMMU Mmu,
+    IN gctSIZE_T PageCount,
+    OUT gctPOINTER * PageTable,
+    OUT gctUINT32 * Address
+    )
+{
+#if gcdMIRROR_PAGETABLE
+    gceSTATUS status;
+    gctPOINTER pageTable;
+    gctUINT32 address;
+    gctINT i;
+    gckMMU mmu;
+
+    gckOS_AcquireMutex(Mmu->os, mirrorPageTableMutex, gcvINFINITE);
+
+    /* Allocate page table for current MMU. */
+    for (i = 0; i < mirrorPageTable->reference; i++)
+    {
+        if (Mmu == mirrorPageTable->mmus[i])
+        {
+            gcmkONERROR(_AllocatePages(Mmu, PageCount, PageTable, Address));
+        }
+    }
+
+    /* Allocate page table for other MMUs. */
+    for (i = 0; i < mirrorPageTable->reference; i++)
+    {
+        mmu = mirrorPageTable->mmus[i];
+
+        if (Mmu != mmu)
+        {
+            gcmkONERROR(_AllocatePages(mmu, PageCount, &pageTable, &address));
+            gcmkASSERT(address == *Address);
+        }
+    }
+
+    gckOS_ReleaseMutex(Mmu->os, mirrorPageTableMutex);
+
+    return gcvSTATUS_OK;
+OnError:
+    return status;
+#else
+    return _AllocatePages(Mmu, PageCount, PageTable, Address);
+#endif
+}
+
+gceSTATUS
+gckMMU_FreePages(
+    IN gckMMU Mmu,
+    IN gctPOINTER PageTable,
+    IN gctSIZE_T PageCount
+    )
+{
+#if gcdMIRROR_PAGETABLE
+    gctINT i;
+    gctUINT32 offset;
+    gckMMU mmu;
+
+    gckOS_AcquireMutex(Mmu->os, mirrorPageTableMutex, gcvINFINITE);
+
+    gcmkVERIFY_OK(_FreePages(Mmu, PageTable, PageCount));
+
+    offset = (gctUINT32)PageTable - (gctUINT32)Mmu->pageTableLogical;
+
+    for (i = 0; i < mirrorPageTable->reference; i++)
+    {
+        mmu = mirrorPageTable->mmus[i];
+
+        if (mmu != Mmu)
+        {
+            gcmkVERIFY_OK(_FreePages(mmu, mmu->pageTableLogical + offset/4, PageCount));
+        }
+    }
+
+    gckOS_ReleaseMutex(Mmu->os, mirrorPageTableMutex);
+
+    return gcvSTATUS_OK;
+#else
+    return _FreePages(Mmu, PageTable, PageCount);
+#endif
 }
 
 gceSTATUS
@@ -1249,6 +1468,14 @@ gckMMU_SetPage(
     IN gctUINT32 *PageEntry
     )
 {
+#if gcdMIRROR_PAGETABLE
+    gctUINT32_PTR pageEntry;
+    gctINT i;
+    gckMMU mmu;
+    gctUINT32 offset = (gctUINT32)PageEntry - (gctUINT32)Mmu->pageTableLogical;
+#endif
+
+    gctUINT32 data;
     gcmkHEADER_ARG("Mmu=0x%x", Mmu);
 
     /* Verify the arguments. */
@@ -1258,13 +1485,40 @@ gckMMU_SetPage(
 
     if (Mmu->hardware->mmuVersion == 0)
     {
-        *PageEntry = PageAddress;
+        data = PageAddress;
     }
     else
     {
-        *PageEntry = _SetPage(PageAddress);
+        data = _SetPage(PageAddress);
     }
 
+    if (Mmu->hardware->bigEndian)
+    {
+        data = gcmSWAB32(data);
+    }
+
+    *PageEntry = data;
+#if gcdMIRROR_PAGETABLE
+    for (i = 0; i < mirrorPageTable->reference; i++)
+    {
+        mmu = mirrorPageTable->mmus[i];
+
+        if (mmu != Mmu)
+        {
+            pageEntry = mmu->pageTableLogical + offset / 4;
+
+            if (mmu->hardware->mmuVersion == 0)
+            {
+                *pageEntry = PageAddress;
+            }
+            else
+            {
+                *pageEntry = _SetPage(PageAddress);
+            }
+        }
+
+    }
+#endif
     /* Success. */
     gcmkFOOTER_NO();
     return gcvSTATUS_OK;
@@ -1418,12 +1672,55 @@ gckMMU_Flush(
                 gckOS_AtomSet(hardware->os, hardware->pageTableDirty, 1));
         }
     }
+#elif gcdMIRROR_PAGETABLE
+    gctINT i;
+    for (i = 0; i < mirrorPageTable->reference; i++)
+    {
+        hardware = mirrorPageTable->hardwares[i];
+
+        /* Notify cores who use this page table. */
+        gcmkVERIFY_OK(
+            gckOS_AtomSet(hardware->os, hardware->pageTableDirty, 1));
+    }
 #else
     hardware = Mmu->hardware;
     gcmkVERIFY_OK(
         gckOS_AtomSet(hardware->os, hardware->pageTableDirty, 1));
 #endif
 
+    return gcvSTATUS_OK;
+}
+
+gceSTATUS
+gckMMU_DumpPageTableEntry(
+    IN gckMMU Mmu,
+    IN gctUINT32 Address
+    )
+{
+    gctUINT32_PTR pageTable;
+    gctUINT32 index;
+    gctUINT32 mtlb, stlb;
+
+    gcmkHEADER_ARG("Mmu=0x%08X Address=0x%08X", Mmu, Address);
+    gcmkVERIFY_OBJECT(Mmu, gcvOBJ_MMU);
+
+    gcmkASSERT(Mmu->hardware->mmuVersion > 0);
+
+    mtlb   = (Address & gcdMMU_MTLB_MASK) >> gcdMMU_MTLB_SHIFT;
+    stlb   = (Address & gcdMMU_STLB_4K_MASK) >> gcdMMU_STLB_4K_SHIFT;
+
+    if (Address >= 0x80000000)
+    {
+        pageTable = Mmu->pageTableLogical;
+
+        index = (mtlb - Mmu->dynamicMappingStart)
+              * gcdMMU_STLB_4K_ENTRY_NUM
+              + stlb;
+
+        gcmkPRINT("    Page table entry = 0x%08X", pageTable[index]);
+    }
+
+    gcmkFOOTER_NO();
     return gcvSTATUS_OK;
 }
 

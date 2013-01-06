@@ -469,6 +469,22 @@ gcoINDEX_UploadOffset(
     IN gctSIZE_T Bytes
     );
 
+/*Merge index2 to index1 from 0, index2 must subset of inex1*/
+gceSTATUS
+gcoINDEX_Merge(
+    IN gcoINDEX Index1,
+    IN gcoINDEX Index2
+    );
+
+/*check if index buffer is enough for this draw*/
+gctBOOL
+gcoINDEX_CheckRange(
+    IN gcoINDEX Index,
+    IN gceINDEX_TYPE Type,
+    IN gctINT Count,
+    IN gctUINT32  Indices
+    );
+
 /* Query the index capabilities. */
 gceSTATUS
 gcoINDEX_QueryCaps(
@@ -871,6 +887,19 @@ gco3D_SetAllEarlyDepthModes(
     IN gctBOOL Disable
     );
 
+/* Switch dynamic early mode */
+gceSTATUS
+gco3D_SwitchDynamicEarlyDepthMode(
+    IN gco3D Engine
+    );
+
+/* Set dynamic early mode */
+gceSTATUS
+gco3D_DisableDynamicEarlyDepthMode(
+    IN gco3D Engine,
+    IN gctBOOL Disable
+    );
+
 /* Enable or disable depth-only mode. */
 gceSTATUS
 gco3D_SetDepthOnly(
@@ -1197,6 +1226,12 @@ gco3D_SetWClipEnable(
     );
 
 gceSTATUS
+gco3D_GetWClipEnable(
+    IN gco3D Engine,
+    OUT gctBOOL * Enable
+    );
+
+gceSTATUS
 gco3D_SetWPlaneLimitF(
 	IN gco3D Engine,
 	IN gctFLOAT Value
@@ -1207,6 +1242,13 @@ gco3D_SetWPlaneLimitX(
 	IN gco3D Engine,
 	IN gctFIXED_POINT Value
     );
+
+
+gceSTATUS
+gco3D_SetWPlaneLimit(
+        IN gco3D Engine,
+        IN gctFLOAT Value
+        );
 
 /*----------------------------------------------------------------------------*/
 /*-------------------------- gco3D Fragment Processor ------------------------*/
@@ -1374,7 +1416,7 @@ typedef struct _gcsTEXTURE
     gceTEXTURE_FILTER           magFilter;
     gceTEXTURE_FILTER           mipFilter;
     gctUINT                     anisoFilter;
-
+    gctBOOL                     forceTopLevel;
     /* Level of detail. */
     gctFIXED_POINT              lodBias;
     gctFIXED_POINT              lodMin;
@@ -1407,6 +1449,20 @@ gcoTEXTURE_ConstructSized(
 gceSTATUS
 gcoTEXTURE_Destroy(
     IN gcoTEXTURE Texture
+    );
+
+/* Replace a mipmap in gcoTEXTURE object. */
+gceSTATUS
+gcoTEXTURE_ReplaceMipMap(
+    IN gcoTEXTURE Texture,
+    IN gctUINT Level,
+    IN gctUINT Width,
+    IN gctUINT Height,
+    IN gctINT imageFormat,
+    IN gceSURF_FORMAT Format,
+    IN gctUINT Depth,
+    IN gctUINT Faces,
+    IN gcePOOL Pool
     );
 
 /* Upload data to an gcoTEXTURE object. */
@@ -1448,6 +1504,29 @@ gcoTEXTURE_UploadCompressed(
     IN gctUINT Slice,
     IN gctCONST_POINTER Memory,
     IN gctSIZE_T Bytes
+    );
+
+/* Upload compressed sub data to an gcoTEXTURE object. */
+gceSTATUS
+gcoTEXTURE_UploadCompressedSub(
+    IN gcoTEXTURE Texture,
+    IN gctUINT MipMap,
+    IN gceTEXTURE_FACE Face,
+    IN gctUINT XOffset,
+    IN gctUINT YOffset,
+    IN gctUINT Width,
+    IN gctUINT Height,
+    IN gctUINT Slice,
+    IN gctCONST_POINTER Memory,
+    IN gctSIZE_T Size
+    );
+
+/* GetImageFormat of texture. */
+gceSTATUS
+gcoTEXTURE_GetImageFormat(
+    IN gcoTEXTURE Texture,
+    IN gctUINT MipMap,
+    OUT gctINT *  ImageFormat
     );
 
 /* Get gcoSURF object for a mipmap level. */
@@ -1494,6 +1573,12 @@ gcoTEXTURE_AddMipMapFromSurface(
     IN gcoTEXTURE Texture,
     IN gctINT     Level,
     IN gcoSURF    Surface
+    );
+
+gceSTATUS
+gcoTEXTURE_SetMaxLevel(
+    IN gcoTEXTURE Texture,
+    IN gctUINT Levels
     );
 
 gceSTATUS
@@ -1751,6 +1836,10 @@ typedef struct _gcsVERTEXARRAY
 
     /* Vertex shader linkage. */
     gctUINT             linkage;
+
+#if gcdUSE_WCLIP_PATCH
+    gctBOOL             isPosition;
+#endif
 }
 gcsVERTEXARRAY,
 * gcsVERTEXARRAY_PTR;
@@ -1777,9 +1866,25 @@ gcoVERTEXARRAY_Bind(
     IN gcoINDEX IndexObject,
     IN gctPOINTER IndexMemory,
     IN OUT gcePRIMITIVE * PrimitiveType,
+#if gcdUSE_WCLIP_PATCH
+    IN OUT gctUINT * PrimitiveCount,
+    IN OUT gctFLOAT * wLimitRms,
+    IN OUT gctBOOL * wLimitDirty
+#else
     IN OUT gctUINT * PrimitiveCount
+#endif
     );
 
+gctUINT
+gcoVERTEXARRAY_GetMaxStream(
+    IN gcoVERTEXARRAY Vertex
+);
+
+gceSTATUS
+gcoVERTEXARRAY_SetMaxStream(
+    IN gcoVERTEXARRAY Vertex,
+    gctUINT maxStreams
+);
 /*******************************************************************************
 ***** Composition *************************************************************/
 

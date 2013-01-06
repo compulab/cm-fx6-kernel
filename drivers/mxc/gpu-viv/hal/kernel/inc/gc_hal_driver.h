@@ -95,6 +95,9 @@ typedef enum _gceHAL_COMMAND_CODES
 
     gcvHAL_READ_ALL_PROFILE_REGISTERS,
     gcvHAL_PROFILE_REGISTERS_2D,
+#if VIVANTE_PROFILER_PERDRAW
+    gcvHAL_READ_PROFILER_REGISTER_SETTING,
+#endif
 
     /* Power management. */
     gcvHAL_SET_POWER_MANAGEMENT_STATE,
@@ -154,6 +157,10 @@ typedef enum _gceHAL_COMMAND_CODES
     /* GPU and event dump */
     gcvHAL_DUMP_GPU_STATE,
     gcvHAL_DUMP_EVENT,
+
+    /* Virtual command buffer. */
+    gcvHAL_ALLOCATE_VIRTUAL_COMMAND_BUFFER,
+    gcvHAL_FREE_VIRTUAL_COMMAND_BUFFER,
 
     /* FSCALE_VAL. */
     gcvHAL_SET_FSCALE_VALUE,
@@ -475,6 +482,34 @@ typedef struct _gcsHAL_INTERFACE
         }
         FreeNonPagedMemory;
 
+        /* gcvHAL_ALLOCATE_NON_PAGED_MEMORY */
+        struct _gcsHAL_ALLOCATE_VIRTUAL_COMMAND_BUFFER
+        {
+            /* Number of bytes to allocate. */
+            IN OUT gctSIZE_T            bytes;
+
+            /* Physical address of allocation. */
+            OUT gctPHYS_ADDR            physical;
+
+            /* Logical address of allocation. */
+            OUT gctPOINTER              logical;
+        }
+        AllocateVirtualCommandBuffer;
+
+        /* gcvHAL_FREE_NON_PAGED_MEMORY */
+        struct _gcsHAL_FREE_VIRTUAL_COMMAND_BUFFER
+        {
+            /* Number of bytes allocated. */
+            IN gctSIZE_T                bytes;
+
+            /* Physical address of allocation. */
+            IN gctPHYS_ADDR             physical;
+
+            /* Logical address of allocation. */
+            IN gctPOINTER               logical;
+        }
+        FreeVirtualCommandBuffer;
+
         /* gcvHAL_EVENT_COMMIT. */
         struct _gcsHAL_EVENT_COMMIT
         {
@@ -669,6 +704,16 @@ typedef struct _gcsHAL_INTERFACE
             IN gctCHAR              fileName[gcdMAX_PROFILE_FILE_NAME];
         }
         SetProfileSetting;
+
+#if VIVANTE_PROFILER_PERDRAW
+        /* gcvHAL_READ_PROFILER_REGISTER_SETTING */
+        struct _gcsHAL_READ_PROFILER_REGISTER_SETTING
+         {
+            /*Should Clear Register*/
+            IN gctBOOL               bclear;
+         }
+        SetProfilerRegisterClear;
+#endif
 
         /* gcvHAL_READ_ALL_PROFILE_REGISTERS */
         struct _gcsHAL_READ_ALL_PROFILE_REGISTERS

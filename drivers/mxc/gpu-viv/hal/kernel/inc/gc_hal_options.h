@@ -43,21 +43,16 @@
 #endif
 
 /*
-    NO_USER_DIRECT_ACCESS_FROM_KERNEL
-
-        This define enables the Linux kernel behavior accessing user memory.
-*/
-#ifndef NO_USER_DIRECT_ACCESS_FROM_KERNEL
-#   define NO_USER_DIRECT_ACCESS_FROM_KERNEL    0
-#endif
-
-/*
     VIVANTE_PROFILER
 
         This define enables the profiler.
 */
 #ifndef VIVANTE_PROFILER
 #   define VIVANTE_PROFILER                     0
+#endif
+
+#ifndef VIVANTE_PROFILER_PERDRAW
+#   define  VIVANTE_PROFILER_PERDRAW    0
 #endif
 
 /*
@@ -150,6 +145,23 @@
 */
 #ifndef gcdDUMP_FRAMERATE
 #   define gcdDUMP_FRAMERATE					0
+#endif
+
+/*
+    gcdVIRTUAL_COMMAND_BUFFER
+        When set to 1, user command buffer and context buffer will be allocated
+        from gcvPOOL_VIRTUAL.
+*/
+#ifndef gcdVIRTUAL_COMMAND_BUFFER
+#   define gcdVIRTUAL_COMMAND_BUFFER            0
+#endif
+
+/*
+    gcdENABLE_FSCALE_VAL_ADJUST
+        When non-zero, FSCALE_VAL when gcvPOWER_ON can be adjusted externally.
+ */
+#ifndef gcdENABLE_FSCALE_VAL_ADJUST
+#   define gcdENABLE_FSCALE_VAL_ADJUST          1
 #endif
 
 /*
@@ -259,13 +271,27 @@
 #endif
 
 /*
+    gcdMIRROR_PAGETABLE
+
+        Enable it when GPUs with old MMU and new MMU exist at same SoC. It makes
+        each GPU use same virtual address to access same physical memory.
+*/
+#ifndef gcdMIRROR_PAGETABLE
+#   define gcdMIRROR_PAGETABLE                  0
+#endif
+
+/*
     gcdMMU_SIZE
 
         Size of the MMU page table in bytes.  Each 4 bytes can hold 4kB worth of
         virtual data.
 */
 #ifndef gcdMMU_SIZE
+#if gcdMIRROR_PAGETABLE
+#   define gcdMMU_SIZE                          0x200000
+#else
 #   define gcdMMU_SIZE                          (2048 << 10)
+#endif
 #endif
 
 /*
@@ -380,7 +406,7 @@
 #   if gcdFPGA_BUILD
 #       define gcdGPU_TIMEOUT                   0
 #   else
-#       define gcdGPU_TIMEOUT                   (2000 * 5)
+#       define gcdGPU_TIMEOUT                   20000
 #   endif
 #endif
 
@@ -765,7 +791,22 @@
         limited by gcdCONTIGUOUS_SIZE_LIMIT.
  */
 #ifndef gcdCONTIGUOUS_SIZE_LIMIT
-#   define gcdCONTIGUOUS_SIZE_LIMIT             0
+#   define gcdCONTIGUOUS_SIZE_LIMIT             4096
+#endif
+
+#ifndef gcdDISALBE_EARLY_EARLY_Z
+#   define gcdDISALBE_EARLY_EARLY_Z             1
+#endif
+
+/*
+    gcdLINK_QUEUE_SIZE
+
+        When non-zero, driver maintains a queue to record information of
+        latest lined context buffer and command buffer. Data in this queue
+        is be used to debug.
+*/
+#ifndef gcdLINK_QUEUE_SIZE
+#   define gcdLINK_QUEUE_SIZE                  0
 #endif
 
 /*  gcdALPHA_KILL_IN_SHADER
@@ -788,6 +829,22 @@
 
 #ifndef gcdUSE_WCLIP_PATCH
 #   define gcdUSE_WCLIP_PATCH                   1
+#endif
+
+#ifndef gcdHZ_L2_DISALBE
+#   define gcdHZ_L2_DISALBE                     1
+#endif
+
+#ifndef gcdBUGFIX15_DISABLE
+#   define gcdBUGFIX15_DISABLE                  1
+#endif
+
+#ifndef gcdDISABLE_HZ_FAST_CLEAR
+#   define gcdDISABLE_HZ_FAST_CLEAR             1
+#endif
+
+#ifndef gcdUSE_NPOT_PATCH
+#define gcdUSE_NPOT_PATCH                       1
 #endif
 
 #endif /* __gc_hal_options_h_ */
