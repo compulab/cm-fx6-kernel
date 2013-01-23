@@ -103,8 +103,7 @@
 #define MX6_ARM2_SD3_WP			IMX_GPIO_NR(7, 0)
 #define MX6_ARM2_CAN1_STBY		IMX_GPIO_NR(7, 12)
 #define MX6_ARM2_CAN1_EN		IMX_GPIO_NR(7, 13)
-#define MX6_ARM2_MAX7310_1_BASE_ADDR	IMX_GPIO_NR(8, 0)
-#define MX6_ARM2_MAX7310_2_BASE_ADDR	IMX_GPIO_NR(8, 8)
+#define MX6_ARM2_PCA9555_BASE_ADDR	IMX_GPIO_NR(8, 0)
 
 #define MX6_ARM2_iSSD_SATA_PWREN	IMX_GPIO_NR(1, 28)
 #define MX6_ARM2_iSSD_SATA_nSTDBY1	IMX_GPIO_NR(3, 20)
@@ -161,13 +160,11 @@
 #define MX6DL_ARM2_EPDC_PMIC_INT	IMX_GPIO_NR(2, 25)
 #define MX6DL_ARM2_EPDC_VCOM		IMX_GPIO_NR(3, 17)
 
-#define MX6_ARM2_IO_EXP_GPIO1(x)	(MX6_ARM2_MAX7310_1_BASE_ADDR + (x))
-#define MX6_ARM2_IO_EXP_GPIO2(x)	(MX6_ARM2_MAX7310_2_BASE_ADDR + (x))
+#define MX6_ARM2_IO_EXP_GPIO(x)		(MX6_ARM2_PCA9555_BASE_ADDR + (x))
 
-#define MX6_ARM2_PCIE_PWR_EN		MX6_ARM2_IO_EXP_GPIO1(2)
-#define MX6_ARM2_PCIE_RESET		MX6_ARM2_IO_EXP_GPIO2(2)
-
-#define MX6_ARM2_CAN2_STBY		MX6_ARM2_IO_EXP_GPIO2(1)
+#define MX6_ARM2_PCIE_PWR_EN		MX6_ARM2_IO_EXP_GPIO(1)
+#define MX6_ARM2_PCIE_RESET		MX6_ARM2_IO_EXP_GPIO(2)
+#define MX6_ARM2_CAN2_STBY		MX6_ARM2_IO_EXP_GPIO(3)
 
 
 #define BMCR_PDOWN			0x0800 /* PHY Powerdown */
@@ -438,58 +435,38 @@ static void spi_device_init(void)
 }
 
 #ifdef CONFIG_GPIO_PCA953X
-static int max7310_1_setup(struct i2c_client *client,
-	unsigned gpio_base, unsigned ngpio,
-	void *context)
+static int pca9555_setup(struct i2c_client *client, unsigned gpio_base, unsigned ngpio, void *context)
 {
-	int max7310_gpio_value[] = { 0, 1, 0, 1, 0, 0, 0, 0 };
+	int i;
+	/* GPIO value:
+	 * 0   - skip
+	 * < 0 - set to input
+	 * > 0 - set to output, with value (gpio_value - 1)
+	 */
+	static int gpio_value[] = {2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2};
 
-	int n;
+	pr_info("%s: init GPIO range %u..%u \n", __FUNCTION__, gpio_base, (gpio_base + ngpio));
+	for (i = 0; i < ARRAY_SIZE(gpio_value); ++i) {
+		if (gpio_value[i] == 0)
+			continue;
 
-	 for (n = 0; n < ARRAY_SIZE(max7310_gpio_value); ++n) {
-		gpio_request(gpio_base + n, "MAX7310 1 GPIO Expander");
-		if (max7310_gpio_value[n] < 0)
-			gpio_direction_input(gpio_base + n);
-		else
-			gpio_direction_output(gpio_base + n,
-						max7310_gpio_value[n]);
-		gpio_export(gpio_base + n, 0);
+		gpio_request((gpio_base + i), "PCA9555 GPIO Expander");
+		if (gpio_value[i] < 0) {
+			gpio_direction_input(gpio_base + i);
+		}
+		else {
+			gpio_direction_output((gpio_base + i), (gpio_value[i] - 1));
+		}
+		gpio_export((gpio_base + i), 0);
 	}
 
 	return 0;
 }
 
-static struct pca953x_platform_data max7310_platdata = {
-	.gpio_base	= MX6_ARM2_MAX7310_1_BASE_ADDR,
+static struct pca953x_platform_data pca9555_gpio_expander_data = {
+	.gpio_base	= MX6_ARM2_PCA9555_BASE_ADDR,
 	.invert		= 0,
-	.setup		= max7310_1_setup,
-};
-
-static int max7310_u48_setup(struct i2c_client *client,
-	unsigned gpio_base, unsigned ngpio,
-	void *context)
-{
-	int max7310_gpio_value[] = { 1, 1, 1, 1, 0, 1, 0, 0 };
-
-	int n;
-
-	 for (n = 0; n < ARRAY_SIZE(max7310_gpio_value); ++n) {
-		gpio_request(gpio_base + n, "MAX7310 U48 GPIO Expander");
-		if (max7310_gpio_value[n] < 0)
-			gpio_direction_input(gpio_base + n);
-		else
-			gpio_direction_output(gpio_base + n,
-						max7310_gpio_value[n]);
-		gpio_export(gpio_base + n, 0);
-	}
-
-	return 0;
-}
-
-static struct pca953x_platform_data max7310_u48_platdata = {
-	.gpio_base	= MX6_ARM2_MAX7310_2_BASE_ADDR,
-	.invert		= 0,
-	.setup		= max7310_u48_setup,
+	.setup		= pca9555_setup,
 };
 #endif	// CONFIG_GPIO_PCA953X
 
@@ -890,6 +867,7 @@ static struct at24_platform_data eeprom_24c02 = {
 };
 
 static struct i2c_board_info mxc_i2c0_board_info[] __initdata = {
+#if 0
 	{
 		I2C_BOARD_INFO("cs42888", 0x48),
 		.platform_data = (void *)&cs42888_data,
@@ -900,6 +878,19 @@ static struct i2c_board_info mxc_i2c0_board_info[] __initdata = {
 		I2C_BOARD_INFO("adv7180", 0x21),
 		.platform_data = (void *)&tvin_data,
 	},
+#endif
+
+	{
+		/* 24c02 eeprom */
+		I2C_BOARD_INFO("24c02", 0x54),
+		.platform_data = &eeprom_24c02,
+	},
+#ifdef CONFIG_GPIO_PCA953X
+	{
+		I2C_BOARD_INFO("pca9555", 0x26),
+		.platform_data = &pca9555_gpio_expander_data,
+	},
+#endif
 };
 
 static struct imxi2c_platform_data mx6_arm2_i2c0_data = {
@@ -920,15 +911,6 @@ static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
 		I2C_BOARD_INFO("max17135", 0x48),
 		.platform_data = &max17135_pdata,
 	},
-#ifdef CONFIG_GPIO_PCA953X
-	{
-		I2C_BOARD_INFO("max7310", 0x1F),
-		.platform_data = &max7310_platdata,
-	}, {
-		I2C_BOARD_INFO("max7310", 0x1B),
-		.platform_data = &max7310_u48_platdata,
-	},
-#endif
 	{
 		I2C_BOARD_INFO("mxc_dvi", 0x50),
 		.platform_data = &sabr_ddc_dvi_data,
@@ -950,6 +932,7 @@ static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
 };
 
 static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
+#if 0
 	{
 		I2C_BOARD_INFO("egalax_ts", 0x4),
 		.irq = gpio_to_irq(MX6_ARM2_CAP_TCH_INT),
@@ -961,6 +944,7 @@ static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
 	}, {
 		I2C_BOARD_INFO("sgtl5000", 0x0a),
 	},
+#endif
 };
 
 static int epdc_get_pins(void)
@@ -2222,10 +2206,13 @@ static void __init mx6_arm2_init(void)
 
 	imx6q_add_imx_caam();
 
+	/* on CompuLab's base board these 2 are identified
+	 * as I2C1 and I2C2 respectively
+	 */ 
 	imx6q_add_imx_i2c(0, &mx6_arm2_i2c0_data);
 	imx6q_add_imx_i2c(1, &mx6_arm2_i2c1_data);
-//	i2c_register_board_info(0, mxc_i2c0_board_info,
-//			ARRAY_SIZE(mxc_i2c0_board_info));
+	i2c_register_board_info(0, mxc_i2c0_board_info,
+				ARRAY_SIZE(mxc_i2c0_board_info));
 //	i2c_register_board_info(1, mxc_i2c1_board_info,
 //			ARRAY_SIZE(mxc_i2c1_board_info));
 //	if (!spdif_en) {

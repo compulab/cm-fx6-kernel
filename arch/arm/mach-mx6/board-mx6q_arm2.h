@@ -127,8 +127,8 @@ static iomux_v3_cfg_t mx6q_arm2_pads[] = {
 #endif
 
 	/* I2C1 */
-	MX6Q_PAD_CSI0_DAT8__I2C1_SDA,
-	MX6Q_PAD_CSI0_DAT9__I2C1_SCL,
+	MX6Q_PAD_EIM_D28__I2C1_SDA,
+	MX6Q_PAD_EIM_D21__I2C1_SCL,
 
 	/* I2C2 */
 	MX6Q_PAD_KEY_COL3__I2C2_SCL,
