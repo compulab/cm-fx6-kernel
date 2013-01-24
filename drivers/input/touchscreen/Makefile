@@ -67,3 +67,4 @@ obj-$(CONFIG_TOUCHSCREEN_MAX11801)	+= max11801_ts.o
 obj-$(CONFIG_TOUCHSCREEN_NOVATEK)	+= novatek_ts.o
 obj-$(CONFIG_TOUCHSCREEN_EGALAX)	+= egalax_ts.o
 obj-$(CONFIG_TOUCHSCREEN_ELAN)		+= elan_ts.o
+obj-$(CONFIG_TOUCHSCREEN_HX8520_C)	+= hx8520-c.o
