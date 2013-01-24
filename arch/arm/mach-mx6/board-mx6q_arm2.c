@@ -808,38 +808,6 @@ static int __init max17135_regulator_init(struct max17135 *max17135)
 	return 0;
 }
 
-static int sii902x_get_pins(void)
-{
-	/* Sii902x HDMI controller */
-	gpio_request(MX6_ARM2_DISP0_RESET, "disp0-reset");
-	gpio_direction_output(MX6_ARM2_DISP0_RESET, 0);
-	gpio_request(MX6_ARM2_DISP0_DET_INT, "disp0-detect");
-	gpio_direction_input(MX6_ARM2_DISP0_DET_INT);
-	return 1;
-}
-
-static void sii902x_put_pins(void)
-{
-	gpio_free(MX6_ARM2_DISP0_RESET);
-	gpio_free(MX6_ARM2_DISP0_DET_INT);
-}
-
-static void sii902x_hdmi_reset(void)
-{
-       gpio_set_value(MX6_ARM2_DISP0_RESET, 0);
-       msleep(10);
-       gpio_set_value(MX6_ARM2_DISP0_RESET, 1);
-       msleep(10);
-}
-
-static struct fsl_mxc_lcd_platform_data sii902x_hdmi_data = {
-	.ipu_id = 0,
-	.disp_id = 0,
-	.reset = sii902x_hdmi_reset,
-	.get_pins = sii902x_get_pins,
-	.put_pins = sii902x_put_pins,
-};
-
 static void mx6q_arm2_read_eeprom(struct memory_accessor *a, void *context)
 {
 	int ret;
@@ -921,10 +889,6 @@ static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
 	}, {
 		I2C_BOARD_INFO("egalax_ts", 0x4),
 		.irq = gpio_to_irq(MX6_ARM2_CAP_TCH_INT),
-	}, {
-		I2C_BOARD_INFO("sii902x", 0x39),
-		.platform_data = &sii902x_hdmi_data,
-		.irq = gpio_to_irq(MX6_ARM2_DISP0_DET_INT),
 	},
 #endif
 	{
@@ -940,14 +904,15 @@ static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
 		I2C_BOARD_INFO("egalax_ts", 0x4),
 		.irq = gpio_to_irq(MX6_ARM2_CAP_TCH_INT),
 	}, {
-		I2C_BOARD_INFO("mxc_hdmi_i2c", 0x50),
-	}, {
 		I2C_BOARD_INFO("ov5640_mipi", 0x3c),
 		.platform_data = (void *)&ov5640_mipi_data,
 	}, {
 		I2C_BOARD_INFO("sgtl5000", 0x0a),
 	},
 #endif
+	{
+		I2C_BOARD_INFO("mxc_hdmi_i2c", 0x50),
+	}, 
 };
 
 static int epdc_get_pins(void)
@@ -1458,6 +1423,12 @@ static struct ipuv3_fb_platform_data sabr_fb_data[] = {
 	.default_bpp		= 24,
 	.int_clk		= false,
 	}, {
+	.disp_dev		= "hdmi",
+	.interface_pix_fmt	= IPU_PIX_FMT_RGB32,
+	.mode_str		= "1920x1080M@60",
+	.default_bpp		= 32,
+	.int_clk		= false,
+	}, {
 	.disp_dev		= "mipi_dsi",
 	.interface_pix_fmt	= IPU_PIX_FMT_RGB24,
 	.mode_str		= "TRULY-WVGA",
@@ -1483,6 +1454,7 @@ static void hdmi_init(int ipu_id, int disp_id)
 	int hdmi_mux_setting;
 	int max_ipu_id = cpu_is_mx6q() ? 1 : 0;
 
+	pr_info("%s: [ipu:disp] = [%d:%d] \n", __FUNCTION__, ipu_id, disp_id);
 	if ((ipu_id > max_ipu_id) || (ipu_id < 0)) {
 		pr_err("Invalid IPU select for HDMI: %d. Set to 0\n", ipu_id);
 		ipu_id = 0;
@@ -2249,8 +2221,8 @@ static void __init mx6_arm2_init(void)
 	imx6q_add_imx_i2c(1, &mx6_arm2_i2c1_data);
 	i2c_register_board_info(0, mxc_i2c0_board_info,
 				ARRAY_SIZE(mxc_i2c0_board_info));
-//	i2c_register_board_info(1, mxc_i2c1_board_info,
-//			ARRAY_SIZE(mxc_i2c1_board_info));
+	i2c_register_board_info(1, mxc_i2c1_board_info,
+				ARRAY_SIZE(mxc_i2c1_board_info));
 //	if (!spdif_en) {
 //		if (disable_mipi_dsi)
 //			mx6_arm2_i2c2_data.bitrate = 100000;
