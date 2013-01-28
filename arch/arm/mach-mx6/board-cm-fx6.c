@@ -51,7 +51,7 @@
 #include <linux/regulator/fixed.h>
 #include <linux/mxc_asrc.h>
 #include <linux/mfd/mxc-hdmi-core.h>
-
+#include <linux/ds2782_battery.h>
 
 #include <mach/common.h>
 #include <mach/hardware.h>
@@ -113,6 +113,7 @@
 
 
 #define BMCR_PDOWN			0x0800 /* PHY Powerdown */
+#define DS2786_RSNS			18	/* [Ohm] - sense resistor value */
 
 static struct clk *sata_clk;
 static int spdif_en;
@@ -429,6 +430,10 @@ static struct pca953x_platform_data sb_fx6_gpio_expander_data = {
 	.setup		= pca9555_setup,
 };
 
+struct ds278x_platform_data ds2786_volt_gauge_data = {
+	.rsns = DS2786_RSNS,
+};
+
 static struct imxi2c_platform_data cm_fx6_i2c0_data = {
 	.bitrate = 100000,
 };
@@ -453,6 +458,12 @@ static struct i2c_board_info mxc_i2c0_board_info[] __initdata = {
 	{
 		I2C_BOARD_INFO("pca9555", 0x26),
 		.platform_data = &sb_fx6_gpio_expander_data,
+	},
+#endif
+#ifdef CONFIG_BATTERY_DS2782
+	{
+		I2C_BOARD_INFO("ds2786", 0x36),
+		.platform_data = &ds2786_volt_gauge_data,
 	},
 #endif
 };
