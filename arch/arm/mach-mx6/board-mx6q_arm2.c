@@ -56,7 +56,7 @@
 #include <sound/pcm.h>
 #include <linux/mxc_asrc.h>
 #include <linux/mfd/mxc-hdmi-core.h>
-
+#include <linux/ds2782_battery.h>
 
 #include <mach/common.h>
 #include <mach/hardware.h>
@@ -473,6 +473,14 @@ static struct pca953x_platform_data pca9555_gpio_expander_data = {
 };
 #endif	// CONFIG_GPIO_PCA953X
 
+#ifdef CONFIG_BATTERY_DS2782
+#define DS2786_RSNS	18	/* [Ohm] - sense resistor value */
+
+struct ds278x_platform_data ds2786_volt_gauge_data = {
+	.rsns = DS2786_RSNS,
+};
+#endif
+
 static void ddc_dvi_init(void)
 {
 	/* enable DVI I2C */
@@ -860,6 +868,12 @@ static struct i2c_board_info mxc_i2c0_board_info[] __initdata = {
 	{
 		I2C_BOARD_INFO("pca9555", 0x26),
 		.platform_data = &pca9555_gpio_expander_data,
+	},
+#endif
+#ifdef CONFIG_BATTERY_DS2782
+	{
+		I2C_BOARD_INFO("ds2786", 0x36),
+		.platform_data = &ds2786_volt_gauge_data,
 	},
 #endif
 };
