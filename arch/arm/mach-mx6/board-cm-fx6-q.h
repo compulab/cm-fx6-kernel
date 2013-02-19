@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Freescale Semiconductor, Inc. All Rights Reserved.
+ * Copyright (C) 2013 CompuLab, Ltd.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -12,8 +12,7 @@
  * GNU General Public License for more details.
 
  * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * with this program; if not, write to the Free Software Foundation, Inc.
  */
 
 #include <mach/iomux-mx6q.h>
@@ -23,17 +22,8 @@ static iomux_v3_cfg_t mx6q_arm2_pads[] = {
 	/* UART4 for debug */
 	MX6Q_PAD_KEY_COL0__UART4_TXD,
 	MX6Q_PAD_KEY_ROW0__UART4_RXD,
-	/* USB HSIC ports use the same pin with ENET */
-#ifdef CONFIG_USB_EHCI_ARC_HSIC
-	/* USB H2 strobe/data pin */
-	MX6Q_PAD_RGMII_TX_CTL__USBOH3_H2_STROBE,
-	MX6Q_PAD_RGMII_TXC__USBOH3_H2_DATA,
 
-	/* USB H3 strobe/data pin */
-	MX6Q_PAD_RGMII_RXC__USBOH3_H3_STROBE,
-	MX6Q_PAD_RGMII_RX_CTL__USBOH3_H3_DATA,
 	/* ENET */
-#else
 	MX6Q_PAD_KEY_COL1__ENET_MDIO,
 	MX6Q_PAD_KEY_COL2__ENET_MDC,
 	MX6Q_PAD_RGMII_TXC__ENET_RGMII_TXC,
@@ -49,13 +39,6 @@ static iomux_v3_cfg_t mx6q_arm2_pads[] = {
 	MX6Q_PAD_RGMII_RD2__ENET_RGMII_RD2,
 	MX6Q_PAD_RGMII_RD3__ENET_RGMII_RD3,
 	MX6Q_PAD_RGMII_RX_CTL__ENET_RGMII_RX_CTL,
-#ifdef CONFIG_FEC_1588
-	MX6Q_PAD_GPIO_16__ENET_ANATOP_ETHERNET_REF_OUT,
-#endif
-#endif
-	/* MCLK for csi0 */
-	MX6Q_PAD_GPIO_0__CCM_CLKO,
-	MX6Q_PAD_GPIO_3__CCM_CLKO2,
 
 	/* SD1 */
 	MX6Q_PAD_SD1_CLK__USDHC1_CLK,
@@ -64,13 +47,7 @@ static iomux_v3_cfg_t mx6q_arm2_pads[] = {
 	MX6Q_PAD_SD1_DAT1__USDHC1_DAT1,
 	MX6Q_PAD_SD1_DAT2__USDHC1_DAT2,
 	MX6Q_PAD_SD1_DAT3__USDHC1_DAT3,
-	/* SD2 */
-	MX6Q_PAD_SD2_CLK__USDHC2_CLK,
-	MX6Q_PAD_SD2_CMD__USDHC2_CMD,
-	MX6Q_PAD_SD2_DAT0__USDHC2_DAT0,
-	MX6Q_PAD_SD2_DAT1__USDHC2_DAT1,
-	MX6Q_PAD_SD2_DAT2__USDHC2_DAT2,
-	MX6Q_PAD_SD2_DAT3__USDHC2_DAT3,
+
 	/* SD3 */
 	MX6Q_PAD_SD3_CLK__USDHC3_CLK_50MHZ,
 	MX6Q_PAD_SD3_CMD__USDHC3_CMD_50MHZ,
@@ -88,18 +65,6 @@ static iomux_v3_cfg_t mx6q_arm2_pads[] = {
 	/* SD3_CD and SD3_WP */
 	MX6Q_PAD_NANDF_CS0__GPIO_6_11,
 	MX6Q_PAD_NANDF_CS1__GPIO_6_14,
-	/* SD4 */
-	MX6Q_PAD_SD4_CLK__USDHC4_CLK_50MHZ,
-	MX6Q_PAD_SD4_CMD__USDHC4_CMD_50MHZ,
-	MX6Q_PAD_SD4_DAT0__USDHC4_DAT0_50MHZ,
-	MX6Q_PAD_SD4_DAT1__USDHC4_DAT1_50MHZ,
-	MX6Q_PAD_SD4_DAT2__USDHC4_DAT2_50MHZ,
-	MX6Q_PAD_SD4_DAT3__USDHC4_DAT3_50MHZ,
-	MX6Q_PAD_SD4_DAT4__USDHC4_DAT4_50MHZ,
-	MX6Q_PAD_SD4_DAT5__USDHC4_DAT5_50MHZ,
-	MX6Q_PAD_SD4_DAT6__USDHC4_DAT6_50MHZ,
-	MX6Q_PAD_SD4_DAT7__USDHC4_DAT7_50MHZ,
-	MX6Q_PAD_NANDF_ALE__USDHC4_RST,
 	/* eCSPI1 */
 	MX6Q_PAD_EIM_EB2__ECSPI1_SS0,
 	MX6Q_PAD_EIM_D16__ECSPI1_SCLK,
@@ -108,17 +73,6 @@ static iomux_v3_cfg_t mx6q_arm2_pads[] = {
 	MX6Q_PAD_EIM_D19__ECSPI1_SS1,
 	MX6Q_PAD_EIM_EB2__GPIO_2_30,	/*SS0*/
 	MX6Q_PAD_EIM_D19__GPIO_3_19,	/*SS1*/
-
-	/* ESAI */
-	MX6Q_PAD_ENET_RXD0__ESAI1_HCKT,
-	MX6Q_PAD_ENET_CRS_DV__ESAI1_SCKT,
-	MX6Q_PAD_ENET_RXD1__ESAI1_FST,
-	MX6Q_PAD_ENET_TX_EN__ESAI1_TX3_RX2,
-	MX6Q_PAD_ENET_TXD1__ESAI1_TX2_RX3,
-	MX6Q_PAD_ENET_TXD0__ESAI1_TX4_RX1,
-	MX6Q_PAD_ENET_MDC__ESAI1_TX5_RX0,
-	MX6Q_PAD_NANDF_CS2__ESAI1_TX0,
-	MX6Q_PAD_NANDF_CS3__ESAI1_TX1,
 
 	/* I2C1 */
 	MX6Q_PAD_CSI0_DAT8__I2C1_SDA,
@@ -158,8 +112,6 @@ static iomux_v3_cfg_t mx6q_arm2_pads[] = {
 	MX6Q_PAD_DISP0_DAT22__IPU1_DISP0_DAT_22,
 	MX6Q_PAD_DISP0_DAT23__IPU1_DISP0_DAT_23,
 
-	MX6Q_PAD_EIM_D24__GPIO_3_24,
-
 	/* UART2 */
 	MX6Q_PAD_EIM_D26__UART2_RXD,
 	MX6Q_PAD_EIM_D27__UART2_TXD,
@@ -168,17 +120,6 @@ static iomux_v3_cfg_t mx6q_arm2_pads[] = {
 
 	/* PWM1 */
 	MX6Q_PAD_GPIO_9__PWM1_PWMO,
-
-	/* DISP0 DET */
-	MX6Q_PAD_EIM_D31__GPIO_3_31,
-
-	/* DISP0 RESET */
-	MX6Q_PAD_EIM_WAIT__GPIO_5_0,
-
-	/* HDMI */
-	MX6Q_PAD_EIM_A25__HDMI_TX_CEC_LINE,
-	MX6Q_PAD_SD1_DAT1__HDMI_TX_OPHYDTB_0,
-	MX6Q_PAD_SD1_DAT0__HDMI_TX_OPHYDTB_1,
 
 	/* USBOTG ID pin */
 	MX6Q_PAD_GPIO_1__USBOTG_ID,
@@ -213,55 +154,6 @@ static iomux_v3_cfg_t mx6q_arm2_can_pads[] = {
 	MX6Q_PAD_CSI0_DAT6__GPIO_5_24,	/* CAN2 EN */
 };
 
-static iomux_v3_cfg_t mx6q_arm2_esai_record_pads[] = {
-	MX6Q_PAD_ENET_RX_ER__ESAI1_HCKR,
-	MX6Q_PAD_ENET_MDIO__ESAI1_SCKR,
-	MX6Q_PAD_ENET_REF_CLK__ESAI1_FSR,
-};
-
-static iomux_v3_cfg_t mx6q_arm2_csi0_sensor_pads[] = {
-	MX6Q_PAD_GPIO_0__CCM_CLKO,
-	/* ipu1 csi0 */
-	MX6Q_PAD_CSI0_DAT12__IPU1_CSI0_D_12,
-	MX6Q_PAD_CSI0_DAT13__IPU1_CSI0_D_13,
-	MX6Q_PAD_CSI0_DAT14__IPU1_CSI0_D_14,
-	MX6Q_PAD_CSI0_DAT15__IPU1_CSI0_D_15,
-	MX6Q_PAD_CSI0_DAT16__IPU1_CSI0_D_16,
-	MX6Q_PAD_CSI0_DAT17__IPU1_CSI0_D_17,
-	MX6Q_PAD_CSI0_DAT18__IPU1_CSI0_D_18,
-	MX6Q_PAD_CSI0_DAT19__IPU1_CSI0_D_19,
-	MX6Q_PAD_CSI0_VSYNC__IPU1_CSI0_VSYNC,
-	MX6Q_PAD_CSI0_MCLK__IPU1_CSI0_HSYNC,
-	MX6Q_PAD_CSI0_PIXCLK__IPU1_CSI0_PIXCLK,
-	/* camera reset */
-	MX6Q_PAD_GPIO_19__GPIO_4_5,
-	/* camera powerdown */
-	MX6Q_PAD_CSI0_DAT5__GPIO_5_23,
-};
-
-static iomux_v3_cfg_t mx6q_arm2_csi0_tvin_pads[] = {
-	/* ipu1 csi0 */
-	MX6Q_PAD_CSI0_DAT12__IPU1_CSI0_D_12,
-	MX6Q_PAD_CSI0_DAT13__IPU1_CSI0_D_13,
-	MX6Q_PAD_CSI0_DAT14__IPU1_CSI0_D_14,
-	MX6Q_PAD_CSI0_DAT15__IPU1_CSI0_D_15,
-	MX6Q_PAD_CSI0_DAT16__IPU1_CSI0_D_16,
-	MX6Q_PAD_CSI0_DAT17__IPU1_CSI0_D_17,
-	MX6Q_PAD_CSI0_DAT18__IPU1_CSI0_D_18,
-	MX6Q_PAD_CSI0_DAT19__IPU1_CSI0_D_19,
-	MX6Q_PAD_CSI0_VSYNC__IPU1_CSI0_VSYNC,
-	MX6Q_PAD_CSI0_MCLK__IPU1_CSI0_HSYNC,
-	MX6Q_PAD_CSI0_PIXCLK__IPU1_CSI0_PIXCLK,
-	/* camera reset */
-	MX6Q_PAD_CSI0_DAT7__GPIO_5_25,
-	/* camera powerdown */
-	MX6Q_PAD_CSI0_DAT5__GPIO_5_23,
-};
-
-static iomux_v3_cfg_t mx6q_arm2_mipi_sensor_pads[] = {
-	MX6Q_PAD_CSI0_MCLK__CCM_CLKO,
-};
-
 static iomux_v3_cfg_t mx6q_arm2_audmux_pads[] = {
 
 	/* AUDMUX */
@@ -288,9 +180,6 @@ mx6q_sd##id##_##speed##mhz[] = {		\
 static iomux_v3_cfg_t MX6Q_USDHC_PAD_SETTING(3, 50);
 static iomux_v3_cfg_t MX6Q_USDHC_PAD_SETTING(3, 100);
 static iomux_v3_cfg_t MX6Q_USDHC_PAD_SETTING(3, 200);
-static iomux_v3_cfg_t MX6Q_USDHC_PAD_SETTING(4, 50);
-static iomux_v3_cfg_t MX6Q_USDHC_PAD_SETTING(4, 100);
-static iomux_v3_cfg_t MX6Q_USDHC_PAD_SETTING(4, 200);
 
 
 /* The GPMI is conflicted with SD3, so init this in the driver. */
@@ -316,12 +205,3 @@ static iomux_v3_cfg_t mx6q_gpmi_nand[] __initdata = {
 	MX6Q_PAD_NANDF_WP_B__RAWNAND_RESETN,
 };
 
-static iomux_v3_cfg_t mx6q_arm2_hdmi_ddc_pads[] = {
-	MX6Q_PAD_KEY_COL3__HDMI_TX_DDC_SCL, /* HDMI DDC SCL */
-	MX6Q_PAD_KEY_ROW3__HDMI_TX_DDC_SDA, /* HDMI DDC SDA */
-};
-
-static iomux_v3_cfg_t mx6q_arm2_i2c2_pads[] = {
-	MX6Q_PAD_KEY_COL3__I2C2_SCL,	/* I2C2 SCL */
-	MX6Q_PAD_KEY_ROW3__I2C2_SDA,	/* I2C2 SDA */
-};
