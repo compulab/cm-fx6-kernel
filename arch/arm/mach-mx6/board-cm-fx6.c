@@ -74,7 +74,6 @@
 /* GPIO PIN, sort by PORT/BIT */
 #define CM_FX6_USBH1_PWR		IMX_GPIO_NR(1, 0)
 #define SB_FX6_DVI_DDC_SEL		IMX_GPIO_NR(1, 2)
-#define CM_FX6_LDB_BACKLIGHT		IMX_GPIO_NR(1, 9)
 #define CM_FX6_iSSD_SATA_PWREN		IMX_GPIO_NR(1, 28)
 #define CM_FX6_iSSD_SATA_VDDC_CTRL	IMX_GPIO_NR(1, 30)
 #define CM_FX6_iSSD_SATA_LDO_EN		IMX_GPIO_NR(2, 16)
@@ -907,12 +906,24 @@ static struct imx_ipuv3_platform_data ipu_data[] = {
 	},
 };
 
-static struct platform_pwm_backlight_data cm_fx6_pwm_backlight_data = {
-	.pwm_id		= 0,
+#if defined(CONFIG_BACKLIGHT_PWM)
+static struct platform_pwm_backlight_data sb_fx6_pwm_backlight_data = {
+	.pwm_id		= 2,
 	.max_brightness	= 255,
-	.dft_brightness	= 128,
-	.pwm_period_ns	= 50000,
+	.dft_brightness	= 255,
+	.pwm_period_ns	= 100000,
 };
+
+static void cm_fx6_pwm_init(void)
+{
+	imx6q_add_mxc_pwm(2);
+	imx6q_add_mxc_pwm_backlight(2, &sb_fx6_pwm_backlight_data);
+}
+
+#else
+
+static void cm_fx6_pwm_init(void) {}
+#endif	// CONFIG_BACKLIGHT_PWM
 
 static struct ion_platform_data imx_ion_data = {
 	.nr = 1,
@@ -1269,8 +1280,6 @@ static void __init cm_fx6_init(void)
 	imx_asrc_data.asrc_audio_clk = clk_get(NULL, "asrc_serial_clk");
 	imx6q_add_asrc(&imx_asrc_data);
 
-	gpio_request(CM_FX6_LDB_BACKLIGHT, "ldb-backlight");
-	gpio_direction_output(CM_FX6_LDB_BACKLIGHT, 1);
 	imx6q_add_otp();
 	imx6q_add_viim();
 	imx6q_add_imx2_wdt(0, NULL);
@@ -1282,8 +1291,7 @@ static void __init cm_fx6_init(void)
 	imx6q_add_ion(0, &imx_ion_data,
 		sizeof(imx_ion_data) + sizeof(struct ion_platform_heap));
 
-	imx6q_add_mxc_pwm(0);
-	imx6q_add_mxc_pwm_backlight(0, &cm_fx6_pwm_backlight_data);
+	cm_fx6_pwm_init();
 
 	if (spdif_en) {
 		mxc_spdif_data.spdif_core_clk = clk_get_sys("mxc_spdif.0", NULL);
