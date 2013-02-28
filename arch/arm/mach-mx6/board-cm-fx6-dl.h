@@ -120,9 +120,6 @@ static iomux_v3_cfg_t cm_fx6_dl_pads[] = {
 	MX6DL_PAD_EIM_D28__UART2_RTS,
 	MX6DL_PAD_EIM_D29__UART2_CTS,
 
-	/* PWM1 */
-	MX6DL_PAD_GPIO_9__PWM1_PWMO,
-
 	/* USB-OTG */
 	MX6DL_PAD_ENET_RX_ER__ANATOP_USBOTG_ID,
 	MX6DL_PAD_EIM_D22__GPIO_3_22,
@@ -143,6 +140,9 @@ static iomux_v3_cfg_t cm_fx6_dl_pads[] = {
 	MX6DL_PAD_SD3_RST__GPIO_7_8,
 	/* USBH1 power */
 	MX6DL_PAD_GPIO_0__GPIO_1_0,
+
+	/* LCD PWM backlight */
+	MX6DL_PAD_SD4_DAT1__PWM3_PWMO,
 
 	/* GPIO key */
 	MX6DL_PAD_ENET_TXD1__GPIO_1_29,
