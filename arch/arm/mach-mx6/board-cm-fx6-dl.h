@@ -110,6 +110,9 @@ static iomux_v3_cfg_t cm_fx6_dl_pads[] = {
 	MX6DL_PAD_SD3_RST__GPIO_7_8,
 	/* USBH1 power */
 	MX6DL_PAD_GPIO_0__GPIO_1_0,
+
+	/* LCD PWM backlight */
+	MX6DL_PAD_SD4_DAT1__PWM3_PWMO,
 };
 
 static iomux_v3_cfg_t cm_fx6_dl_spdif_pads[] = {
