@@ -43,7 +43,7 @@ static int imx_hdmi_dai_probe(struct platform_device *pdev)
 	int ret = 0;
 
 	if (!hdmi_get_registered())
-		return -ENOMEM;
+		return -ENODEV;
 
 	hdmi_data = kzalloc(sizeof(*hdmi_data), GFP_KERNEL);
 	if (!hdmi_data)
