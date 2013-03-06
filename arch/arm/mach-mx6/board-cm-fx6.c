@@ -114,6 +114,7 @@
 
 #define BMCR_PDOWN			0x0800 /* PHY Powerdown */
 #define DS2786_RSNS			18	/* [Ohm] - sense resistor value */
+#define EEPROM_1ST_MAC_OFF		4
 
 static struct clk *sata_clk;
 static int spdif_en;
@@ -360,36 +361,36 @@ static void spi_device_init(void)
 }
 
 #if defined(CONFIG_I2C_IMX)
-/** 
- * this implementation is provided as a reference 
- */
-static void eeprom_at24_read_write(struct memory_accessor *a, void *context)
+static void eeprom_read_mac_address(struct memory_accessor *ma, unsigned char *mac)
 {
-	int ret;
-	char inbuff[24];
-#if 0
-	char outbuff[] = "CompuLab";
+	int err;
 
-	ret = a->write(a, outbuff, 0, 9);
-	if (ret < 0) {
-		pr_err("%s: could not write EEPROM: %d \n", __FUNCTION__, ret);
+	err = ma->read(ma, mac, EEPROM_1ST_MAC_OFF, ETH_ALEN);
+	if (err < ETH_ALEN) {
+		pr_warn("cm-fx6: could not read ID EEPROM: %d \n", err);
+		memset(mac, 0, ETH_ALEN);
 	}
-#endif
-
-	ret = a->read(a, inbuff, 0, 9);
-	inbuff[8] = '\0';	// against evil eye
-	if (ret < 0) {
-		pr_err("%s: could not read EEPROM: %d \n", __FUNCTION__, ret);
-		return;
-	}
-	pr_info("%s: read EEPROM: %s \n", __FUNCTION__, inbuff);
 }
+
+static void cm_fx6_id_eeprom_setup(struct memory_accessor *ma, void *context)
+{
+	eeprom_read_mac_address(ma, fec_data.mac);
+	imx6_init_fec(fec_data);
+}
+
+static struct at24_platform_data cm_fx6_id_eeprom_data = {
+	.byte_len	= 256,
+	.page_size	= 8,
+	.flags		= AT24_FLAG_IRUGO,
+	.setup		= cm_fx6_id_eeprom_setup,
+	.context	= NULL,
+};
 
 static struct at24_platform_data eeprom_24c02 = {
 	.byte_len	= 256,
 	.page_size	= 8,
 	.flags		= AT24_FLAG_IRUGO,
-	.setup		= eeprom_at24_read_write,
+	.setup		= NULL,
 	.context	= NULL,
 };
 
@@ -479,7 +480,7 @@ static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
 	{
 		/* ID EEPROM on the module board: 24c02 */
 		I2C_BOARD_INFO("24c02", 0x50),
-		.platform_data = &eeprom_24c02,
+		.platform_data = &cm_fx6_id_eeprom_data,
 	},
 #endif
 };
@@ -1151,7 +1152,7 @@ static void __init cm_fx6_init(void)
 
 	imx6q_add_anatop_thermal_imx(1, &cm_fx6_anatop_thermal_data);
 
-	imx6_init_fec(fec_data);
+	// imx6_init_fec(fec_data); -- called asynchronously by cm_fx6_id_eeprom_setup()
 
 	imx6q_add_pm_imx(0, &cm_fx6_pm_data);
 	imx6q_add_sdhci_usdhc_imx(2, &cm_fx6_sd3_data);
