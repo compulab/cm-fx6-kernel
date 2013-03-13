@@ -113,9 +113,11 @@
 #define EEPROM_1ST_MAC_OFF		4
 #define EEPROM_BOARD_NAME_OFF           128
 #define EEPROM_BOARD_NAME_LEN           16
+#define WM8731_MCLK_FREQ		(24000000 / 2)
 
 #define MX6_SNVS_LPCR_REG		0x38
 
+static struct clk *clko;
 static struct clk *sata_clk;
 static int spdif_en;
 static unsigned int board_rev;
@@ -698,6 +700,12 @@ static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
 		.platform_data = &cm_fx6_id_eeprom_data,
 	},
 #endif
+#ifdef CONFIG_SND_SOC_IMX_WM8731
+	{
+		/* wm8731 audio codec */
+		I2C_BOARD_INFO("wm8731", 0x1a),
+	}
+#endif
 };
 
 
@@ -1177,9 +1185,83 @@ static struct imx_ssi_platform_data cm_fx6_ssi_pdata = {
 	.flags = IMX_SSI_DMA | IMX_SSI_SYN,
 };
 
+static struct mxc_audio_platform_data cm_fx6_audio_data;
+
+static int wm8731_init(void)
+{
+	long rate;
+
+	rate = clk_round_rate(clko, WM8731_MCLK_FREQ);
+	clk_set_rate(clko, rate);
+	pr_info("%s: CLKO rate %d -> %ld \n", __FUNCTION__, WM8731_MCLK_FREQ, rate);
+
+	cm_fx6_audio_data.sysclk = rate;
+
+	return 0;
+}
+
+static int wm8731_clock_enable(int enable)
+{
+	if ( enable )
+		return clk_enable(clko);
+
+	clk_disable(clko);
+	return 0;
+}
+
+static struct platform_device cm_fx6_audio_device = {
+	.name	= "imx-wm8731",
+	.id	= -1,
+};
+
+static struct mxc_audio_platform_data cm_fx6_audio_data = {
+	.ssi_num = 1,
+	.src_port = 2,
+	.ext_port = 4,	/* AUDMUX: port[2] -> port[4] */
+	.hp_gpio = -1,
+	.mic_gpio = -1,
+	.init = wm8731_init,
+	.clock_enable = wm8731_clock_enable,
+};
+
 static int __init cm_fx6_init_audio(void)
 {
-	/* FIXME */
+	long rate;
+	struct clk *clko2;
+	iomux_v3_cfg_t *audmux_pads = NULL;
+	int audmux_pads_cnt = 0;
+
+	clko2 = clk_get(NULL, "clko2_clk");
+	if (IS_ERR(clko2)) {
+		pr_err("Could not get CLKO2 clock \n");
+		return PTR_ERR(clko);
+	}
+	rate = clk_round_rate(clko2, WM8731_MCLK_FREQ);
+	clk_set_rate(clko2, rate);
+
+	clko = clk_get(NULL, "clko_clk");
+	if (IS_ERR(clko)) {
+		pr_err("Could not get CLKO clock \n");
+		return PTR_ERR(clko);
+	}
+
+	clk_set_parent(clko, clko2);
+
+
+
+	if (cpu_is_mx6q()) {
+		audmux_pads = cm_fx6_q_audmux_pads;
+		audmux_pads_cnt = ARRAY_SIZE(cm_fx6_q_audmux_pads);
+	}
+	else if (cpu_is_mx6dl()) {
+		audmux_pads = cm_fx6_dl_audmux_pads;
+		audmux_pads_cnt = ARRAY_SIZE(cm_fx6_dl_audmux_pads);
+	}
+	mxc_iomux_v3_setup_multiple_pads(audmux_pads, audmux_pads_cnt);
+
+	mxc_register_device(&cm_fx6_audio_device, &cm_fx6_audio_data);
+	imx6q_add_imx_ssi(1, &cm_fx6_ssi_pdata);
+
 	return 0;
 }
 
