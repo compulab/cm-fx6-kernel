@@ -318,4 +318,11 @@ config MX6_CLK_FOR_BOOTUI_TRANS
 	 avoid setting IPU related clocks' parents when initializing clock tree
 	 so that bootloader splashimage can transition to kernel smoothly.
 
+config MX6_ENET_IRQ_TO_GPIO
+	bool "Route ENET interrupts to GPIO"
+	default n
+	help
+	   Enabling this will direct all the ENET interrupts to a board specific GPIO.
+	   This will allow the system to enter WAIT mode when ENET is active.
+
 endif
