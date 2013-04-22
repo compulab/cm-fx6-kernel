@@ -153,6 +153,24 @@ static int plt_sd_pad_change(unsigned int index, int clock)
 	u32 sd_pads_50mhz_cnt;
 
 	switch (index) {
+	case 0:
+		if (cpu_is_mx6q()) {
+			sd_pads_200mhz = mx6q_sd1_200mhz;
+			sd_pads_100mhz = mx6q_sd1_100mhz;
+			sd_pads_50mhz  = mx6q_sd1_50mhz;
+
+			sd_pads_200mhz_cnt = ARRAY_SIZE(mx6q_sd1_200mhz);
+			sd_pads_100mhz_cnt = ARRAY_SIZE(mx6q_sd1_100mhz);
+			sd_pads_50mhz_cnt  = ARRAY_SIZE(mx6q_sd1_50mhz);
+		} else if (cpu_is_mx6dl()) {
+			sd_pads_200mhz = mx6dl_sd1_200mhz;
+			sd_pads_100mhz = mx6dl_sd1_100mhz;
+			sd_pads_50mhz  = mx6dl_sd1_50mhz;
+
+			sd_pads_200mhz_cnt = ARRAY_SIZE(mx6dl_sd1_200mhz);
+			sd_pads_100mhz_cnt = ARRAY_SIZE(mx6dl_sd1_100mhz);
+			sd_pads_50mhz_cnt  = ARRAY_SIZE(mx6dl_sd1_50mhz);
+		}
 	case 2:
 		if (cpu_is_mx6q()) {
 			sd_pads_200mhz = mx6q_sd3_200mhz;
@@ -200,6 +218,12 @@ static int plt_sd_pad_change(unsigned int index, int clock)
 							sd_pads_50mhz_cnt);
 	}
 }
+
+static const struct esdhc_platform_data cm_fx6_sd1_data __initconst = {
+	.always_present         = 1,
+	.keep_power_at_suspend  = 1,
+	.platform_pad_change	= plt_sd_pad_change,
+};
 
 static const struct esdhc_platform_data cm_fx6_sd3_data __initconst = {
 	.cd_gpio		= CM_FX6_SD3_CD,
@@ -1416,6 +1440,7 @@ static void __init cm_fx6_init(void)
 
 	imx6q_add_pm_imx(0, &cm_fx6_pm_data);
 	imx6q_add_sdhci_usdhc_imx(2, &cm_fx6_sd3_data);
+	imx6q_add_sdhci_usdhc_imx(0, &cm_fx6_sd1_data);
 	imx_add_viv_gpu(&imx6_gpu_data, &imx6_gpu_pdata);
 	if (cpu_is_mx6q())
 		imx6q_add_ahci(0, &cm_fx6_sata_data);

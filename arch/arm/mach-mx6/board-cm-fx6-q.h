@@ -40,22 +40,7 @@ static iomux_v3_cfg_t cm_fx6_q_pads[] = {
 	MX6Q_PAD_RGMII_RD3__ENET_RGMII_RD3,
 	MX6Q_PAD_RGMII_RX_CTL__ENET_RGMII_RX_CTL,
 
-	/* SD1-- SD-card -- mutually exclusive with Wi-Fi hardware */
-	MX6Q_PAD_SD1_CLK__USDHC1_CLK,
-	MX6Q_PAD_SD1_CMD__USDHC1_CMD,
-	MX6Q_PAD_SD1_DAT0__USDHC1_DAT0,
-	MX6Q_PAD_SD1_DAT1__USDHC1_DAT1,
-	MX6Q_PAD_SD1_DAT2__USDHC1_DAT2,
-	MX6Q_PAD_SD1_DAT3__USDHC1_DAT3,
-
-	/* SD3 -- SD-card */
-	MX6Q_PAD_SD3_CLK__USDHC3_CLK_50MHZ,
-	MX6Q_PAD_SD3_CMD__USDHC3_CMD_50MHZ,
-	MX6Q_PAD_SD3_DAT0__USDHC3_DAT0_50MHZ,
-	MX6Q_PAD_SD3_DAT1__USDHC3_DAT1_50MHZ,
-	MX6Q_PAD_SD3_DAT2__USDHC3_DAT2_50MHZ,
-	MX6Q_PAD_SD3_DAT3__USDHC3_DAT3_50MHZ,
-	/* SD3_CD and SD3_WP */
+	/* SD3: CD and WP */
 	MX6Q_PAD_SD3_DAT4__GPIO_7_1,
 	MX6Q_PAD_SD3_DAT5__GPIO_7_0,
 
@@ -208,10 +193,25 @@ mx6q_sd##id##_##speed##mhz[] = {		\
 	MX6Q_PAD_SD##id##_DAT7__USDHC##id##_DAT7_##speed##MHZ,	\
 }
 
-static iomux_v3_cfg_t MX6Q_USDHC_PAD_SETTING(3, 50);
-static iomux_v3_cfg_t MX6Q_USDHC_PAD_SETTING(3, 100);
-static iomux_v3_cfg_t MX6Q_USDHC_PAD_SETTING(3, 200);
+#define MX6Q_USDHC_PAD_SETTING_HALF(id, speed)	\
+mx6q_sd##id##_##speed##mhz[] = {		\
+	MX6Q_PAD_SD##id##_CLK__USDHC##id##_CLK_##speed##MHZ,	\
+	MX6Q_PAD_SD##id##_CMD__USDHC##id##_CMD_##speed##MHZ,	\
+	MX6Q_PAD_SD##id##_DAT0__USDHC##id##_DAT0_##speed##MHZ,	\
+	MX6Q_PAD_SD##id##_DAT1__USDHC##id##_DAT1_##speed##MHZ,	\
+	MX6Q_PAD_SD##id##_DAT2__USDHC##id##_DAT2_##speed##MHZ,	\
+	MX6Q_PAD_SD##id##_DAT3__USDHC##id##_DAT3_##speed##MHZ,	\
+}
 
+/* SD3 */
+static iomux_v3_cfg_t MX6Q_USDHC_PAD_SETTING_HALF(3, 50);
+static iomux_v3_cfg_t MX6Q_USDHC_PAD_SETTING_HALF(3, 100);
+static iomux_v3_cfg_t MX6Q_USDHC_PAD_SETTING_HALF(3, 200);
+
+/* SD1 */
+static iomux_v3_cfg_t MX6Q_USDHC_PAD_SETTING_HALF(1, 50);
+static iomux_v3_cfg_t MX6Q_USDHC_PAD_SETTING_HALF(1, 100);
+static iomux_v3_cfg_t MX6Q_USDHC_PAD_SETTING_HALF(1, 200);
 
 static iomux_v3_cfg_t mx6q_gpmi_nand[] __initdata = {
 	MX6Q_PAD_NANDF_CLE__RAWNAND_CLE,
