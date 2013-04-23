@@ -95,10 +95,12 @@
 #define CM_FX6_iSSD_SATA_nSTDBY2	IMX_GPIO_NR(5, 2)
 #define CM_FX6_iSSD_SATA_nRSTDLY	IMX_GPIO_NR(6, 6)
 #define SB_FX6_DVI_HPD			IMX_GPIO_NR(6, 15)
+#define CM_FX6_WIFI_nRESET		IMX_GPIO_NR(6, 16)
 #define CM_FX6_iSSD_SATA_PWLOSS_INT	IMX_GPIO_NR(6, 31)
 #define SB_FX6_SD3_WP			IMX_GPIO_NR(7, 0)
 #define SB_FX6_SD3_CD			IMX_GPIO_NR(7, 1)
 #define CM_FX6_USBHUB_nRST		IMX_GPIO_NR(7, 8)
+#define CM_FX6_WIFI_nPD			IMX_GPIO_NR(7, 12)
 #define SB_FX6_GPIO_HOMEBTN		IMX_GPIO_NR(7, 13)
 
 #define SB_FX6_PCA9555_BASE_ADDR	IMX_GPIO_NR(8, 0)
@@ -1483,6 +1485,29 @@ static void __init cm_fx6_init_gpio_buttons(void) {}
 #endif
 
 
+static struct gpio cm_fx6_wifi_gpios[] = {
+
+	{ CM_FX6_WIFI_nPD,	GPIOF_OUT_INIT_HIGH,	"wifi pdn" },
+	{ CM_FX6_WIFI_nRESET,	GPIOF_OUT_INIT_LOW,	"wifi rstn" },
+};
+
+static void cm_fx6_init_wifi(void)
+{
+	int err;
+
+	err = gpio_request_array(cm_fx6_wifi_gpios, ARRAY_SIZE(cm_fx6_wifi_gpios));
+	if (err) {
+		pr_err("CM-FX6: failed to request wifi gpios: %d \n", err);
+	} else {
+		msleep(1);
+		gpio_set_value(CM_FX6_WIFI_nRESET, 1);
+	}
+
+	gpio_export(CM_FX6_WIFI_nPD, false);
+	gpio_export(CM_FX6_WIFI_nRESET, false);
+}
+
+
 static void mx6_snvs_poweroff(void)
 {
 	void __iomem *mx6_snvs_base =  MX6_IO_ADDRESS(MX6Q_SNVS_BASE_ADDR);
@@ -1554,6 +1579,7 @@ static void __init cm_fx6_init(void)
 	cm_fx6_init_led();
 	cm_fx6_init_spi();
 	cm_fx6_init_gpio_buttons();
+	cm_fx6_init_wifi();
 
 	imx6q_add_anatop_thermal_imx(1, &cm_fx6_anatop_thermal_data);
 

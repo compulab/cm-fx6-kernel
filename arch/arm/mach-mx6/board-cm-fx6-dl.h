@@ -138,6 +138,10 @@ static iomux_v3_cfg_t cm_fx6_dl_pads[] = {
 	/* GPIO key */
 	MX6DL_PAD_ENET_TXD1__GPIO_1_29,
 	MX6DL_PAD_GPIO_18__GPIO_7_13,
+
+	/* Wlan */
+	MX6DL_PAD_GPIO_17__GPIO_7_12,	/* WiFi nPD */
+	MX6DL_PAD_NANDF_CS3__GPIO_6_16,	/* WiFi nRESET */
 };
 
 static iomux_v3_cfg_t cm_fx6_dl_spdif_pads[] = {

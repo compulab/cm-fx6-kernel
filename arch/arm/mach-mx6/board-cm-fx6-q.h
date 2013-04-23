@@ -139,6 +139,10 @@ static iomux_v3_cfg_t cm_fx6_q_pads[] = {
 	MX6Q_PAD_ENET_TXD1__GPIO_1_29,
 	MX6Q_PAD_GPIO_18__GPIO_7_13,
 
+	/* Wlan */
+	MX6Q_PAD_GPIO_17__GPIO_7_12,	/* WiFi nPD */
+	MX6Q_PAD_NANDF_CS3__GPIO_6_16,	/* WiFi nRESET */
+
 	/* iSSD SATA flash storage -- MX6Q only */
 	MX6Q_PAD_ENET_TX_EN__GPIO_1_28,	/* PWREN */
 	MX6Q_PAD_EIM_A22__GPIO_2_16,	/* LDO_EN */
