@@ -140,6 +140,10 @@ static iomux_v3_cfg_t cm_fx6_dl_pads[] = {
 
 	/* CLKO: master clock to audio codec */
 	MX6DL_PAD_GPIO_5__CCM_CLKO,
+
+	/* Wlan */
+	MX6DL_PAD_GPIO_17__GPIO_7_12,	/* WiFi nPD */
+	MX6DL_PAD_NANDF_CS3__GPIO_6_16,	/* WiFi nRESET */
 };
 
 static iomux_v3_cfg_t cm_fx6_dl_spdif_pads[] = {

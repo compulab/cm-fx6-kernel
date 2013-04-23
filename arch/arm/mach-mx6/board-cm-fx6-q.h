@@ -154,6 +154,10 @@ static iomux_v3_cfg_t cm_fx6_q_pads[] = {
 	MX6Q_PAD_EIM_D29__GPIO_3_29,	/* STBY_REQ */
 	MX6Q_PAD_EIM_A23__GPIO_6_6,	/* nRSTDLY */
 	MX6Q_PAD_EIM_BCLK__GPIO_6_31,	/* PWLOSS_INT */
+
+	/* Wlan */
+	MX6Q_PAD_GPIO_17__GPIO_7_12,	/* WiFi nPD */
+	MX6Q_PAD_NANDF_CS3__GPIO_6_16,	/* WiFi nRESET */
 };
 
 static iomux_v3_cfg_t cm_fx6_q_spdif_pads[] = {
