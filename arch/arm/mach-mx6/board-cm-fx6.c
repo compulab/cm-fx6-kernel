@@ -79,13 +79,14 @@
 /* GPIO PIN, sort by PORT/BIT */
 #define CM_FX6_LDB_BACKLIGHT		IMX_GPIO_NR(1, 9)
 #define CM_FX6_ECSPI1_CS0		IMX_GPIO_NR(2, 30)
+#define CM_FX6_GREEN_LED		IMX_GPIO_NR(2, 31)
 #define CM_FX6_ECSPI1_CS1		IMX_GPIO_NR(3, 19)
 #define CM_FX6_USB_OTG_PWR		IMX_GPIO_NR(3, 22)
-#define CM_FX6_CAN2_EN		IMX_GPIO_NR(5, 24)
+#define CM_FX6_CAN2_EN			IMX_GPIO_NR(5, 24)
 #define CM_FX6_SD3_CD			IMX_GPIO_NR(6, 11)
 #define CM_FX6_SD3_WP			IMX_GPIO_NR(6, 14)
 #define CM_FX6_CAN1_STBY		IMX_GPIO_NR(7, 12)
-#define CM_FX6_CAN1_EN		IMX_GPIO_NR(7, 13)
+#define CM_FX6_CAN1_EN			IMX_GPIO_NR(7, 13)
 #define CM_FX6_MAX7310_1_BASE_ADDR	IMX_GPIO_NR(8, 0)
 #define CM_FX6_MAX7310_2_BASE_ADDR	IMX_GPIO_NR(8, 8)
 
@@ -813,6 +814,39 @@ static const struct imx_pcie_platform_data cm_fx6_pcie_data  __initconst = {
 	.pcie_dis	= -EINVAL,
 };
 
+
+#if defined(CONFIG_LEDS_GPIO) && defined(CONFIG_LEDS_TRIGGER_HEARTBEAT)
+static struct gpio_led cm_fx6_leds[] = {
+	[0] = {
+		.gpio			= CM_FX6_GREEN_LED,
+		.name			= "cm_fx6:load",
+		.default_trigger	= "heartbeat",
+		.active_low		= 0,
+	},
+};
+
+static struct gpio_led_platform_data cm_fx6_led_pdata = {
+	.num_leds	= ARRAY_SIZE(cm_fx6_leds),
+	.leds		= cm_fx6_leds,
+};
+
+static struct platform_device cm_fx6_led_device = {
+	.name		= "leds-gpio",
+	.id		= -1,
+	.dev		= {
+		.platform_data = &cm_fx6_led_pdata,
+	},
+};
+
+static void __init cm_fx6_init_led(void)
+{
+	platform_device_register(&cm_fx6_led_device);
+}
+#else
+static inline void cm_fx6_init_led(void) {}
+#endif
+
+
 /*!
  * Board specific initialization.
  */
@@ -932,6 +966,8 @@ static void __init cm_fx6_init(void)
 		i2c_register_board_info(2, mxc_i2c2_board_info,
 				ARRAY_SIZE(mxc_i2c2_board_info));
 	}
+
+	cm_fx6_init_led();
 
 	/* SPI */
 	imx6q_add_ecspi(0, &cm_fx6_spi_data);
