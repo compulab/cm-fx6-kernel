@@ -78,6 +78,7 @@
 #define CM_FX6_CAN2_EN			IMX_GPIO_NR(5, 24)
 #define SB_FX6_SD3_WP			IMX_GPIO_NR(7, 0)
 #define SB_FX6_SD3_CD			IMX_GPIO_NR(7, 1)
+#define CM_FX6_USBHUB_nRST		IMX_GPIO_NR(7, 8)
 #define CM_FX6_CAN1_STBY		IMX_GPIO_NR(7, 12)
 #define CM_FX6_CAN1_EN			IMX_GPIO_NR(7, 13)
 #define CM_FX6_MAX7310_1_BASE_ADDR	IMX_GPIO_NR(8, 0)
@@ -371,6 +372,17 @@ static void icm_fx6_usbotg_vbus(bool on)
 static void __init cm_fx6_init_usb(void)
 {
 	int ret = 0;
+
+
+	/* reset USB hub */
+	gpio_request_one(CM_FX6_USBHUB_nRST, GPIOF_INIT_LOW, "usb-hub-reset");
+	if (ret) {
+		pr_err("failed to request USBHUB_nRST GPIO: %d \n", ret);
+		return;
+	}
+	udelay(1);
+	gpio_set_value(CM_FX6_USBHUB_nRST, 1);
+
 
 	imx_otg_base = MX6_IO_ADDRESS(MX6Q_USB_OTG_BASE_ADDR);
 
