@@ -2530,9 +2530,10 @@ static int addrconf_notify(struct notifier_block *this, unsigned long event,
 			if (!addrconf_qdisc_ok(dev)) {
 				/* device is not ready yet. */
 				printk(KERN_INFO
-					"ADDRCONF(NETDEV_UP): %s: "
+					"ADDRCONF(NETDEV_UP): %s:[%02x:%02x:%02x:%02x:%02x:%02x] "
 					"link is not ready\n",
-					dev->name);
+					dev->name, dev->dev_addr[0], dev->dev_addr[1], dev->dev_addr[2],
+				        dev->dev_addr[3], dev->dev_addr[4], dev->dev_addr[5]);
 				break;
 			}
 
