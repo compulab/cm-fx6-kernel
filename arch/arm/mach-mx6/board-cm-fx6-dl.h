@@ -121,6 +121,9 @@ static iomux_v3_cfg_t cm_fx6_dl_pads[] = {
 
 	/* USBOTG ID pin */
 	MX6DL_PAD_GPIO_1__USBOTG_ID,
+
+	/* green LED */
+	MX6DL_PAD_EIM_EB3__GPIO_2_31,
  };
 
 static iomux_v3_cfg_t cm_fx6_dl_i2c3_pads[] = {
