@@ -125,6 +125,9 @@ static iomux_v3_cfg_t cm_fx6_q_pads[] = {
 
 	/* green LED */
 	MX6Q_PAD_EIM_EB3__GPIO_2_31,
+
+	/* USB hub reset */
+	MX6Q_PAD_SD3_RST__GPIO_7_8,
 };
 
 static iomux_v3_cfg_t cm_fx6_q_i2c3_pads[] = {
