@@ -83,8 +83,8 @@
 #define CM_FX6_ECSPI1_CS1		IMX_GPIO_NR(3, 19)
 #define CM_FX6_USB_OTG_PWR		IMX_GPIO_NR(3, 22)
 #define CM_FX6_CAN2_EN			IMX_GPIO_NR(5, 24)
-#define CM_FX6_SD3_CD			IMX_GPIO_NR(6, 11)
-#define CM_FX6_SD3_WP			IMX_GPIO_NR(6, 14)
+#define CM_FX6_SD3_WP			IMX_GPIO_NR(7, 0)
+#define CM_FX6_SD3_CD			IMX_GPIO_NR(7, 1)
 #define CM_FX6_CAN1_STBY		IMX_GPIO_NR(7, 12)
 #define CM_FX6_CAN1_EN			IMX_GPIO_NR(7, 13)
 #define CM_FX6_MAX7310_1_BASE_ADDR	IMX_GPIO_NR(8, 0)
@@ -180,11 +180,11 @@ static int plt_sd_pad_change(unsigned int index, int clock)
 static const struct esdhc_platform_data cm_fx6_sd3_data __initconst = {
 	.cd_gpio		= CM_FX6_SD3_CD,
 	.wp_gpio		= CM_FX6_SD3_WP,
-	.support_18v		= 1,
 	.support_8bit		= 1,
 	.keep_power_at_suspend	= 1,
 	.delay_line		= 0,
 	.platform_pad_change	= plt_sd_pad_change,
+	.cd_type		= ESDHC_CD_GPIO,
 };
 
 static int __init gpmi_nand_platform_init(void)
