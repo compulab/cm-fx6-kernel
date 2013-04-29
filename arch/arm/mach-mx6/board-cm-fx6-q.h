@@ -17,7 +17,7 @@
 
 #include <mach/iomux-mx6q.h>
 
-static iomux_v3_cfg_t mx6q_arm2_pads[] = {
+static iomux_v3_cfg_t cm_fx6_q_pads[] = {
 
 	/* UART4 for debug */
 	MX6Q_PAD_KEY_COL0__UART4_TXD,
@@ -130,18 +130,18 @@ static iomux_v3_cfg_t mx6q_arm2_pads[] = {
 	MX6Q_PAD_GPIO_2__MLB_MLBDAT,
 };
 
-static iomux_v3_cfg_t mx6q_arm2_i2c3_pads[] = {
+static iomux_v3_cfg_t cm_fx6_q_i2c3_pads[] = {
 	MX6Q_PAD_GPIO_5__I2C3_SCL,
 	MX6Q_PAD_GPIO_16__I2C3_SDA,
 };
 
-static iomux_v3_cfg_t mx6q_arm2_spdif_pads[] = {
+static iomux_v3_cfg_t cm_fx6_q_spdif_pads[] = {
 	/* SPDIF */
 	MX6Q_PAD_GPIO_16__SPDIF_IN1,
 	MX6Q_PAD_GPIO_17__SPDIF_OUT1,
 };
 
-static iomux_v3_cfg_t mx6q_arm2_can_pads[] = {
+static iomux_v3_cfg_t cm_fx6_q_can_pads[] = {
 	/* CAN1 */
 	MX6Q_PAD_GPIO_7__CAN1_TXCAN,
 	MX6Q_PAD_KEY_ROW2__CAN1_RXCAN,
@@ -154,7 +154,7 @@ static iomux_v3_cfg_t mx6q_arm2_can_pads[] = {
 	MX6Q_PAD_CSI0_DAT6__GPIO_5_24,	/* CAN2 EN */
 };
 
-static iomux_v3_cfg_t mx6q_arm2_audmux_pads[] = {
+static iomux_v3_cfg_t cm_fx6_q_audmux_pads[] = {
 
 	/* AUDMUX */
 	MX6Q_PAD_CSI0_DAT4__AUDMUX_AUD3_TXC,

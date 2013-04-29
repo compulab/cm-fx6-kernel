@@ -77,25 +77,25 @@
 #include "board-cm-fx6-dl.h"
 
 /* GPIO PIN, sort by PORT/BIT */
-#define MX6_ARM2_LDB_BACKLIGHT		IMX_GPIO_NR(1, 9)
-#define MX6_ARM2_ECSPI1_CS0		IMX_GPIO_NR(2, 30)
-#define MX6_ARM2_ECSPI1_CS1		IMX_GPIO_NR(3, 19)
-#define MX6_ARM2_USB_OTG_PWR		IMX_GPIO_NR(3, 22)
-#define MX6_ARM2_CAN2_EN		IMX_GPIO_NR(5, 24)
-#define MX6_ARM2_SD3_CD			IMX_GPIO_NR(6, 11)
-#define MX6_ARM2_SD3_WP			IMX_GPIO_NR(6, 14)
-#define MX6_ARM2_CAN1_STBY		IMX_GPIO_NR(7, 12)
-#define MX6_ARM2_CAN1_EN		IMX_GPIO_NR(7, 13)
-#define MX6_ARM2_MAX7310_1_BASE_ADDR	IMX_GPIO_NR(8, 0)
-#define MX6_ARM2_MAX7310_2_BASE_ADDR	IMX_GPIO_NR(8, 8)
+#define CM_FX6_LDB_BACKLIGHT		IMX_GPIO_NR(1, 9)
+#define CM_FX6_ECSPI1_CS0		IMX_GPIO_NR(2, 30)
+#define CM_FX6_ECSPI1_CS1		IMX_GPIO_NR(3, 19)
+#define CM_FX6_USB_OTG_PWR		IMX_GPIO_NR(3, 22)
+#define CM_FX6_CAN2_EN		IMX_GPIO_NR(5, 24)
+#define CM_FX6_SD3_CD			IMX_GPIO_NR(6, 11)
+#define CM_FX6_SD3_WP			IMX_GPIO_NR(6, 14)
+#define CM_FX6_CAN1_STBY		IMX_GPIO_NR(7, 12)
+#define CM_FX6_CAN1_EN		IMX_GPIO_NR(7, 13)
+#define CM_FX6_MAX7310_1_BASE_ADDR	IMX_GPIO_NR(8, 0)
+#define CM_FX6_MAX7310_2_BASE_ADDR	IMX_GPIO_NR(8, 8)
 
-#define MX6_ARM2_IO_EXP_GPIO1(x)	(MX6_ARM2_MAX7310_1_BASE_ADDR + (x))
-#define MX6_ARM2_IO_EXP_GPIO2(x)	(MX6_ARM2_MAX7310_2_BASE_ADDR + (x))
+#define CM_FX6_IO_EXP_GPIO1(x)	(CM_FX6_MAX7310_1_BASE_ADDR + (x))
+#define CM_FX6_IO_EXP_GPIO2(x)	(CM_FX6_MAX7310_2_BASE_ADDR + (x))
 
-#define MX6_ARM2_PCIE_PWR_EN		MX6_ARM2_IO_EXP_GPIO1(2)
-#define MX6_ARM2_PCIE_RESET		MX6_ARM2_IO_EXP_GPIO2(2)
+#define CM_FX6_PCIE_PWR_EN		CM_FX6_IO_EXP_GPIO1(2)
+#define CM_FX6_PCIE_RESET		CM_FX6_IO_EXP_GPIO2(2)
 
-#define MX6_ARM2_CAN2_STBY		MX6_ARM2_IO_EXP_GPIO2(1)
+#define CM_FX6_CAN2_STBY		CM_FX6_IO_EXP_GPIO2(1)
 
 
 #define BMCR_PDOWN			0x0800 /* PHY Powerdown */
@@ -176,9 +176,9 @@ static int plt_sd_pad_change(unsigned int index, int clock)
 	}
 }
 
-static const struct esdhc_platform_data mx6_arm2_sd3_data __initconst = {
-	.cd_gpio		= MX6_ARM2_SD3_CD,
-	.wp_gpio		= MX6_ARM2_SD3_WP,
+static const struct esdhc_platform_data cm_fx6_sd3_data __initconst = {
+	.cd_gpio		= CM_FX6_SD3_CD,
+	.wp_gpio		= CM_FX6_SD3_WP,
 	.support_18v		= 1,
 	.support_8bit		= 1,
 	.keep_power_at_suspend	= 1,
@@ -222,23 +222,23 @@ static int __init board_support_onfi_nand(char *p)
 early_param("onfi_support", board_support_onfi_nand);
 
 static const struct anatop_thermal_platform_data
-	mx6_arm2_anatop_thermal_data __initconst = {
+	cm_fx6_anatop_thermal_data __initconst = {
 	.name = "anatop_thermal",
 };
 
-static const struct imxuart_platform_data mx6_arm2_uart1_data __initconst = {
+static const struct imxuart_platform_data cm_fx6_uart1_data __initconst = {
 	.flags      = IMXUART_HAVE_RTSCTS | IMXUART_USE_DCEDTE | IMXUART_SDMA,
 	.dma_req_rx = MX6Q_DMA_REQ_UART2_RX,
 	.dma_req_tx = MX6Q_DMA_REQ_UART2_TX,
 };
 
-static inline void mx6_arm2_init_uart(void)
+static inline void cm_fx6_init_uart(void)
 {
 	imx6q_add_imx_uart(3, NULL);
-	imx6q_add_imx_uart(1, &mx6_arm2_uart1_data);
+	imx6q_add_imx_uart(1, &cm_fx6_uart1_data);
 }
 
-static int mx6_arm2_fec_phy_init(struct phy_device *phydev)
+static int cm_fx6_fec_phy_init(struct phy_device *phydev)
 {
 	unsigned short val;
 
@@ -265,7 +265,7 @@ static int mx6_arm2_fec_phy_init(struct phy_device *phydev)
 	return 0;
 }
 
-static int mx6_arm2_fec_power_hibernate(struct phy_device *phydev)
+static int cm_fx6_fec_power_hibernate(struct phy_device *phydev)
 {
 	unsigned short val;
 
@@ -280,19 +280,19 @@ static int mx6_arm2_fec_power_hibernate(struct phy_device *phydev)
 }
 
 static struct fec_platform_data fec_data __initdata = {
-	.init			= mx6_arm2_fec_phy_init,
-	.power_hibernate	= mx6_arm2_fec_power_hibernate,
+	.init			= cm_fx6_fec_phy_init,
+	.power_hibernate	= cm_fx6_fec_power_hibernate,
 	.phy			= PHY_INTERFACE_MODE_RGMII,
 };
 
-static int mx6_arm2_spi_cs[] = {
-	MX6_ARM2_ECSPI1_CS0,
-	MX6_ARM2_ECSPI1_CS1,
+static int cm_fx6_spi_cs[] = {
+	CM_FX6_ECSPI1_CS0,
+	CM_FX6_ECSPI1_CS1,
 };
 
-static const struct spi_imx_master mx6_arm2_spi_data __initconst = {
-	.chipselect     = mx6_arm2_spi_cs,
-	.num_chipselect = ARRAY_SIZE(mx6_arm2_spi_cs),
+static const struct spi_imx_master cm_fx6_spi_data __initconst = {
+	.chipselect     = cm_fx6_spi_cs,
+	.num_chipselect = ARRAY_SIZE(cm_fx6_spi_cs),
 };
 
 #if defined(CONFIG_MTD_M25P80) || defined(CONFIG_MTD_M25P80_MODULE)
@@ -357,7 +357,7 @@ static int max7310_1_setup(struct i2c_client *client,
 }
 
 static struct pca953x_platform_data max7310_platdata = {
-	.gpio_base	= MX6_ARM2_MAX7310_1_BASE_ADDR,
+	.gpio_base	= CM_FX6_MAX7310_1_BASE_ADDR,
 	.invert		= 0,
 	.setup		= max7310_1_setup,
 };
@@ -366,15 +366,15 @@ static struct i2c_board_info mxc_i2c0_board_info[] __initdata = {
 	/* FIXME */
 };
 
-static struct imxi2c_platform_data mx6_arm2_i2c0_data = {
+static struct imxi2c_platform_data cm_fx6_i2c0_data = {
 	.bitrate = 100000,
 };
 
-static struct imxi2c_platform_data mx6_arm2_i2c1_data = {
+static struct imxi2c_platform_data cm_fx6_i2c1_data = {
 	.bitrate = 100000,
 };
 
-static struct imxi2c_platform_data mx6_arm2_i2c2_data = {
+static struct imxi2c_platform_data cm_fx6_i2c2_data = {
 	.bitrate = 400000,
 };
 
@@ -391,15 +391,15 @@ static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
 	},
 };
 
-static void imx6_arm2_usbotg_vbus(bool on)
+static void icm_fx6_usbotg_vbus(bool on)
 {
 	if (on)
-		gpio_set_value(MX6_ARM2_USB_OTG_PWR, 1);
+		gpio_set_value(CM_FX6_USB_OTG_PWR, 1);
 	else
-		gpio_set_value(MX6_ARM2_USB_OTG_PWR, 0);
+		gpio_set_value(CM_FX6_USB_OTG_PWR, 0);
 }
 
-static void __init mx6_arm2_init_usb(void)
+static void __init cm_fx6_init_usb(void)
 {
 	int ret = 0;
 
@@ -409,15 +409,15 @@ static void __init mx6_arm2_init_usb(void)
 	 * or it will affect signal quality at dp.
 	 */
 
-	ret = gpio_request(MX6_ARM2_USB_OTG_PWR, "usb-pwr");
+	ret = gpio_request(CM_FX6_USB_OTG_PWR, "usb-pwr");
 	if (ret) {
-		pr_err("failed to get GPIO MX6_ARM2_USB_OTG_PWR:%d\n", ret);
+		pr_err("failed to get GPIO CM_FX6_USB_OTG_PWR:%d\n", ret);
 		return;
 	}
-	gpio_direction_output(MX6_ARM2_USB_OTG_PWR, 0);
+	gpio_direction_output(CM_FX6_USB_OTG_PWR, 0);
 	mxc_iomux_set_gpr_register(1, 13, 1, 1);
 
-	mx6_set_otghost_vbus_func(imx6_arm2_usbotg_vbus);
+	mx6_set_otghost_vbus_func(icm_fx6_usbotg_vbus);
 	mx6_usb_dr_init();
 }
 
@@ -426,15 +426,15 @@ static struct viv_gpu_platform_data imx6_gpu_pdata __initdata = {
 };
 
 /* HW Initialization, if return 0, initialization is successful. */
-static int mx6_arm2_sata_init(struct device *dev, void __iomem *addr)
+static int cm_fx6_sata_init(struct device *dev, void __iomem *addr)
 {
 	u32 tmpdata;
 	int ret = 0;
 	struct clk *clk;
 
 	/* Enable SATA PWR CTRL_0 of MAX7310 */
-	gpio_request(MX6_ARM2_MAX7310_1_BASE_ADDR, "SATA_PWR_EN");
-	gpio_direction_output(MX6_ARM2_MAX7310_1_BASE_ADDR, 1);
+	gpio_request(CM_FX6_MAX7310_1_BASE_ADDR, "SATA_PWR_EN");
+	gpio_direction_output(CM_FX6_MAX7310_1_BASE_ADDR, 1);
 
 	sata_clk = clk_get(dev, "imx_sata_clk");
 	if (IS_ERR(sata_clk)) {
@@ -487,26 +487,26 @@ release_sata_clk:
 put_sata_clk:
 	clk_put(sata_clk);
 	/* Disable SATA PWR CTRL_0 of MAX7310 */
-	gpio_request(MX6_ARM2_MAX7310_1_BASE_ADDR, "SATA_PWR_EN");
-	gpio_direction_output(MX6_ARM2_MAX7310_1_BASE_ADDR, 0);
+	gpio_request(CM_FX6_MAX7310_1_BASE_ADDR, "SATA_PWR_EN");
+	gpio_direction_output(CM_FX6_MAX7310_1_BASE_ADDR, 0);
 
 	return ret;
 }
 
-static void mx6_arm2_sata_exit(struct device *dev)
+static void cm_fx6_sata_exit(struct device *dev)
 {
 	clk_disable(sata_clk);
 	clk_put(sata_clk);
 
 	/* Disable SATA PWR CTRL_0 of MAX7310 */
-	gpio_request(MX6_ARM2_MAX7310_1_BASE_ADDR, "SATA_PWR_EN");
-	gpio_direction_output(MX6_ARM2_MAX7310_1_BASE_ADDR, 0);
+	gpio_request(CM_FX6_MAX7310_1_BASE_ADDR, "SATA_PWR_EN");
+	gpio_direction_output(CM_FX6_MAX7310_1_BASE_ADDR, 0);
 
 }
 
-static struct ahci_platform_data mx6_arm2_sata_data = {
-	.init	= mx6_arm2_sata_init,
-	.exit	= mx6_arm2_sata_exit,
+static struct ahci_platform_data cm_fx6_sata_data = {
+	.init	= cm_fx6_sata_init,
+	.exit	= cm_fx6_sata_exit,
 };
 
 static struct imx_asrc_platform_data imx_asrc_data = {
@@ -596,7 +596,7 @@ static struct imx_ipuv3_platform_data ipu_data[] = {
 	},
 };
 
-static struct platform_pwm_backlight_data mx6_arm2_pwm_backlight_data = {
+static struct platform_pwm_backlight_data cm_fx6_pwm_backlight_data = {
 	.pwm_id		= 0,
 	.max_brightness	= 255,
 	.dft_brightness	= 128,
@@ -615,35 +615,35 @@ static struct ion_platform_data imx_ion_data = {
 };
 
 static struct gpio mx6_flexcan_gpios[] = {
-	{ MX6_ARM2_CAN1_EN, GPIOF_OUT_INIT_LOW, "flexcan1-en" },
-	{ MX6_ARM2_CAN1_STBY, GPIOF_OUT_INIT_LOW, "flexcan1-stby" },
-	{ MX6_ARM2_CAN2_EN, GPIOF_OUT_INIT_LOW, "flexcan2-en" },
+	{ CM_FX6_CAN1_EN, GPIOF_OUT_INIT_LOW, "flexcan1-en" },
+	{ CM_FX6_CAN1_STBY, GPIOF_OUT_INIT_LOW, "flexcan1-stby" },
+	{ CM_FX6_CAN2_EN, GPIOF_OUT_INIT_LOW, "flexcan2-en" },
 };
 
 static void mx6_flexcan0_switch(int enable)
 {
 	if (enable) {
-		gpio_set_value(MX6_ARM2_CAN1_EN, 1);
-		gpio_set_value(MX6_ARM2_CAN1_STBY, 1);
+		gpio_set_value(CM_FX6_CAN1_EN, 1);
+		gpio_set_value(CM_FX6_CAN1_STBY, 1);
 	} else {
-		gpio_set_value(MX6_ARM2_CAN1_EN, 0);
-		gpio_set_value(MX6_ARM2_CAN1_STBY, 0);
+		gpio_set_value(CM_FX6_CAN1_EN, 0);
+		gpio_set_value(CM_FX6_CAN1_STBY, 0);
 	}
 }
 
 static void mx6_flexcan1_switch(int enable)
 {
 	if (enable) {
-		gpio_set_value(MX6_ARM2_CAN2_EN, 1);
-		gpio_set_value_cansleep(MX6_ARM2_CAN2_STBY, 1);
+		gpio_set_value(CM_FX6_CAN2_EN, 1);
+		gpio_set_value_cansleep(CM_FX6_CAN2_STBY, 1);
 	} else {
-		gpio_set_value(MX6_ARM2_CAN2_EN, 0);
-		gpio_set_value_cansleep(MX6_ARM2_CAN2_STBY, 0);
+		gpio_set_value(CM_FX6_CAN2_EN, 0);
+		gpio_set_value_cansleep(CM_FX6_CAN2_STBY, 0);
 	}
 }
 
 static const struct flexcan_platform_data
-		mx6_arm2_flexcan_pdata[] __initconst = {
+		cm_fx6_flexcan_pdata[] __initconst = {
 	{
 		.transceiver_switch = mx6_flexcan0_switch,
 	}, {
@@ -660,7 +660,7 @@ static void arm2_suspend_exit(void)
 {
 	/* resmue resore */
 }
-static const struct pm_platform_data mx6_arm2_pm_data __initconst = {
+static const struct pm_platform_data cm_fx6_pm_data __initconst = {
 	.name		= "imx_pm",
 	.suspend_enter	= arm2_suspend_enter,
 	.suspend_exit	= arm2_suspend_exit,
@@ -692,18 +692,18 @@ static struct platform_device arm2_vmmc_reg_devices = {
 	},
 };
 
-static struct imx_ssi_platform_data mx6_arm2_ssi_pdata = {
+static struct imx_ssi_platform_data cm_fx6_ssi_pdata = {
 	.flags = IMX_SSI_DMA | IMX_SSI_SYN,
 };
 
-static int __init mx6_arm2_init_audio(void)
+static int __init cm_fx6_init_audio(void)
 {
 	/* FIXME */
 
 	return 0;
 }
 
-static struct mxc_mlb_platform_data mx6_arm2_mlb150_data = {
+static struct mxc_mlb_platform_data cm_fx6_mlb150_data = {
 	.reg_nvcc		= NULL,
 	.mlb_clk		= "mlb150_clk",
 	.mlb_pll_clk		= "pll6",
@@ -734,7 +734,7 @@ static struct mxc_dvfs_platform_data arm2_dvfscore_data = {
 	.delay_time		= 80,
 };
 
-static void __init mx6_arm2_fixup(struct machine_desc *desc, struct tag *tags,
+static void __init cm_fx6_fixup(struct machine_desc *desc, struct tag *tags,
 				   char **cmdline, struct meminfo *mi)
 {
 	char *str;
@@ -806,9 +806,9 @@ static struct mxc_spdif_platform_data mxc_spdif_data = {
 	.spdif_clk		= NULL, /* spdif bus clk */
 };
 
-static const struct imx_pcie_platform_data mx6_arm2_pcie_data  __initconst = {
-	.pcie_pwr_en	= MX6_ARM2_PCIE_PWR_EN,
-	.pcie_rst	= MX6_ARM2_PCIE_RESET,
+static const struct imx_pcie_platform_data cm_fx6_pcie_data  __initconst = {
+	.pcie_pwr_en	= CM_FX6_PCIE_PWR_EN,
+	.pcie_rst	= CM_FX6_PCIE_RESET,
 	.pcie_wake_up	= -EINVAL,
 	.pcie_dis	= -EINVAL,
 };
@@ -816,7 +816,7 @@ static const struct imx_pcie_platform_data mx6_arm2_pcie_data  __initconst = {
 /*!
  * Board specific initialization.
  */
-static void __init mx6_arm2_init(void)
+static void __init cm_fx6_init(void)
 {
 	int i;
 	int ret;
@@ -838,25 +838,25 @@ static void __init mx6_arm2_init(void)
 	 */
 
 	if (cpu_is_mx6q()) {
-		common_pads = mx6q_arm2_pads;
-		spdif_pads = mx6q_arm2_spdif_pads;
-		flexcan_pads = mx6q_arm2_can_pads;
-		i2c3_pads = mx6q_arm2_i2c3_pads;
+		common_pads = cm_fx6_q_pads;
+		spdif_pads = cm_fx6_q_spdif_pads;
+		flexcan_pads = cm_fx6_q_can_pads;
+		i2c3_pads = cm_fx6_q_i2c3_pads;
 
-		common_pads_cnt = ARRAY_SIZE(mx6q_arm2_pads);
-		spdif_pads_cnt =  ARRAY_SIZE(mx6q_arm2_spdif_pads);
-		flexcan_pads_cnt = ARRAY_SIZE(mx6q_arm2_can_pads);
-		i2c3_pads_cnt = ARRAY_SIZE(mx6q_arm2_i2c3_pads);
+		common_pads_cnt = ARRAY_SIZE(cm_fx6_q_pads);
+		spdif_pads_cnt =  ARRAY_SIZE(cm_fx6_q_spdif_pads);
+		flexcan_pads_cnt = ARRAY_SIZE(cm_fx6_q_can_pads);
+		i2c3_pads_cnt = ARRAY_SIZE(cm_fx6_q_i2c3_pads);
 	} else if (cpu_is_mx6dl()) {
-		common_pads = mx6dl_arm2_pads;
-		spdif_pads = mx6dl_arm2_spdif_pads;
-		flexcan_pads = mx6dl_arm2_can_pads;
-		i2c3_pads = mx6dl_arm2_i2c3_pads;
+		common_pads = cm_fx6_dl_pads;
+		spdif_pads = cm_fx6_dl_spdif_pads;
+		flexcan_pads = cm_fx6_dl_can_pads;
+		i2c3_pads = cm_fx6_dl_i2c3_pads;
 
-		common_pads_cnt = ARRAY_SIZE(mx6dl_arm2_pads);
-		spdif_pads_cnt =  ARRAY_SIZE(mx6dl_arm2_spdif_pads);
-		flexcan_pads_cnt = ARRAY_SIZE(mx6dl_arm2_can_pads);
-		i2c3_pads_cnt = ARRAY_SIZE(mx6dl_arm2_i2c3_pads);
+		common_pads_cnt = ARRAY_SIZE(cm_fx6_dl_pads);
+		spdif_pads_cnt =  ARRAY_SIZE(cm_fx6_dl_spdif_pads);
+		flexcan_pads_cnt = ARRAY_SIZE(cm_fx6_dl_can_pads);
+		i2c3_pads_cnt = ARRAY_SIZE(cm_fx6_dl_i2c3_pads);
 	}
 
 	BUG_ON(!common_pads);
@@ -893,7 +893,7 @@ static void __init mx6_arm2_init(void)
 	gp_reg_id = arm2_dvfscore_data.reg_id;
 	soc_reg_id = arm2_dvfscore_data.soc_id;
 	pu_reg_id = arm2_dvfscore_data.pu_id;
-	mx6_arm2_init_uart();
+	cm_fx6_init_uart();
 
 
 	imx6q_add_mxc_hdmi_core(&hdmi_core_data);
@@ -921,36 +921,36 @@ static void __init mx6_arm2_init(void)
 
 	imx6q_add_imx_caam();
 
-	imx6q_add_imx_i2c(0, &mx6_arm2_i2c0_data);
-	imx6q_add_imx_i2c(1, &mx6_arm2_i2c1_data);
+	imx6q_add_imx_i2c(0, &cm_fx6_i2c0_data);
+	imx6q_add_imx_i2c(1, &cm_fx6_i2c1_data);
 	i2c_register_board_info(0, mxc_i2c0_board_info,
 			ARRAY_SIZE(mxc_i2c0_board_info));
 	i2c_register_board_info(1, mxc_i2c1_board_info,
 			ARRAY_SIZE(mxc_i2c1_board_info));
 	if (!spdif_en) {
-		imx6q_add_imx_i2c(2, &mx6_arm2_i2c2_data);
+		imx6q_add_imx_i2c(2, &cm_fx6_i2c2_data);
 		i2c_register_board_info(2, mxc_i2c2_board_info,
 				ARRAY_SIZE(mxc_i2c2_board_info));
 	}
 
 	/* SPI */
-	imx6q_add_ecspi(0, &mx6_arm2_spi_data);
+	imx6q_add_ecspi(0, &cm_fx6_spi_data);
 	spi_device_init();
 
 	imx6q_add_mxc_hdmi(&hdmi_data);
 
-	imx6q_add_anatop_thermal_imx(1, &mx6_arm2_anatop_thermal_data);
+	imx6q_add_anatop_thermal_imx(1, &cm_fx6_anatop_thermal_data);
 
 	imx6_init_fec(fec_data);
 
-	imx6q_add_pm_imx(0, &mx6_arm2_pm_data);
-	imx6q_add_sdhci_usdhc_imx(2, &mx6_arm2_sd3_data);
+	imx6q_add_pm_imx(0, &cm_fx6_pm_data);
+	imx6q_add_sdhci_usdhc_imx(2, &cm_fx6_sd3_data);
 	imx_add_viv_gpu(&imx6_gpu_data, &imx6_gpu_pdata);
 	if (cpu_is_mx6q())
-		imx6q_add_ahci(0, &mx6_arm2_sata_data);
+		imx6q_add_ahci(0, &cm_fx6_sata_data);
 	imx6q_add_vpu();
-	mx6_arm2_init_usb();
-	mx6_arm2_init_audio();
+	cm_fx6_init_usb();
+	cm_fx6_init_audio();
 	platform_device_register(&arm2_vmmc_reg_devices);
 	mx6_cpu_regulator_init();
 
@@ -958,8 +958,8 @@ static void __init mx6_arm2_init(void)
 	imx_asrc_data.asrc_audio_clk = clk_get(NULL, "asrc_serial_clk");
 	imx6q_add_asrc(&imx_asrc_data);
 
-	gpio_request(MX6_ARM2_LDB_BACKLIGHT, "ldb-backlight");
-	gpio_direction_output(MX6_ARM2_LDB_BACKLIGHT, 1);
+	gpio_request(CM_FX6_LDB_BACKLIGHT, "ldb-backlight");
+	gpio_direction_output(CM_FX6_LDB_BACKLIGHT, 1);
 	imx6q_add_otp();
 	imx6q_add_viim();
 	imx6q_add_imx2_wdt(0, NULL);
@@ -973,7 +973,7 @@ static void __init mx6_arm2_init(void)
 		sizeof(imx_ion_data) + sizeof(struct ion_platform_heap));
 
 	imx6q_add_mxc_pwm(0);
-	imx6q_add_mxc_pwm_backlight(0, &mx6_arm2_pwm_backlight_data);
+	imx6q_add_mxc_pwm_backlight(0, &cm_fx6_pwm_backlight_data);
 
 	if (spdif_en) {
 		mxc_spdif_data.spdif_core_clk = clk_get_sys("mxc_spdif.0", NULL);
@@ -987,8 +987,8 @@ static void __init mx6_arm2_init(void)
 		if (ret) {
 			pr_err("failed to request flexcan-gpios: %d\n", ret);
 		} else {
-			imx6q_add_flexcan0(&mx6_arm2_flexcan_pdata[0]);
-			imx6q_add_flexcan1(&mx6_arm2_flexcan_pdata[1]);
+			imx6q_add_flexcan0(&cm_fx6_flexcan_pdata[0]);
+			imx6q_add_flexcan1(&cm_fx6_flexcan_pdata[1]);
 		}
 	}
 
@@ -997,10 +997,10 @@ static void __init mx6_arm2_init(void)
 	imx6q_add_perfmon(0);
 	imx6q_add_perfmon(1);
 	imx6q_add_perfmon(2);
-	imx6q_add_mlb150(&mx6_arm2_mlb150_data);
+	imx6q_add_mlb150(&cm_fx6_mlb150_data);
 
 	/* Add PCIe RC interface support */
-	imx6q_add_pcie(&mx6_arm2_pcie_data);
+	imx6q_add_pcie(&cm_fx6_pcie_data);
 	imx6q_add_busfreq();
 }
 
@@ -1022,7 +1022,7 @@ static struct sys_timer mxc_timer = {
 	.init   = mx6_timer_init,
 };
 
-static void __init mx6_arm2_reserve(void)
+static void __init cm_fx6_reserve(void)
 {
 	phys_addr_t phys;
 #if defined(CONFIG_MXC_GPU_VIV) || defined(CONFIG_MXC_GPU_VIV_MODULE)
@@ -1046,11 +1046,11 @@ static void __init mx6_arm2_reserve(void)
 
 MACHINE_START(CM_FX6, "CompuLab i.MX6 CM-FX6 Module")
 	.boot_params	= MX6_PHYS_OFFSET + 0x100,
-	.fixup		= mx6_arm2_fixup,
+	.fixup		= cm_fx6_fixup,
 	.map_io		= mx6_map_io,
 	.init_irq	= mx6_init_irq,
-	.init_machine	= mx6_arm2_init,
+	.init_machine	= cm_fx6_init,
 	.timer		= &mxc_timer,
-	.reserve	= mx6_arm2_reserve,
+	.reserve	= cm_fx6_reserve,
 MACHINE_END
 
