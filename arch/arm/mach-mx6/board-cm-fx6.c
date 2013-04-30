@@ -104,7 +104,6 @@
 
 static struct clk *sata_clk;
 static int spdif_en;
-static int gpmi_en;
 static int flexcan_en;
 
 extern char *soc_reg_id;
@@ -152,40 +151,41 @@ static void sb_fx6_sd_init(void)
 	imx6q_add_sdhci_usdhc_imx(0, &cm_fx6_sd1_data);
 }
 
-static int __init gpmi_nand_platform_init(void)
+static int gpmi_nand_platform_init(void)
 {
 	iomux_v3_cfg_t *nand_pads = NULL;
 	u32 nand_pads_cnt;
 
 	if (cpu_is_mx6q()) {
-		nand_pads = mx6q_gpmi_nand;
-		nand_pads_cnt = ARRAY_SIZE(mx6dl_gpmi_nand);
+		nand_pads = cm_fx6_q_gpmi_nand;
+		nand_pads_cnt = ARRAY_SIZE(cm_fx6_q_gpmi_nand);
 	} else if (cpu_is_mx6dl()) {
-		nand_pads = mx6dl_gpmi_nand;
-		nand_pads_cnt = ARRAY_SIZE(mx6dl_gpmi_nand);
+		nand_pads = cm_fx6_dl_gpmi_nand;
+		nand_pads_cnt = ARRAY_SIZE(cm_fx6_dl_gpmi_nand);
 
 	}
 	BUG_ON(!nand_pads);
 	return mxc_iomux_v3_setup_multiple_pads(nand_pads, nand_pads_cnt);
 }
 
-static struct gpmi_nand_platform_data
-mx6_gpmi_nand_platform_data __initdata = {
+static struct mtd_partition gpmi_nand_partitions[] = {
+	{
+		.name	= "nand",
+		.offset	= 0,
+		.size	= MTDPART_SIZ_FULL,
+	},
+};
+
+static struct gpmi_nand_platform_data cm_fx6_gpmi_nand_pdata = {
 	.platform_init           = gpmi_nand_platform_init,
 	.min_prop_delay_in_ns    = 5,
 	.max_prop_delay_in_ns    = 9,
 	.max_chip_count          = 1,
+	.partitions		 = gpmi_nand_partitions,
+	.partition_count	 = ARRAY_SIZE(gpmi_nand_partitions),
 	.enable_bbt              = 1,
 	.enable_ddr              = 0,
 };
-
-static int __init board_support_onfi_nand(char *p)
-{
-	mx6_gpmi_nand_platform_data.enable_ddr = 1;
-	return 0;
-}
-
-early_param("onfi_support", board_support_onfi_nand);
 
 static const struct anatop_thermal_platform_data
 	cm_fx6_anatop_thermal_data __initconst = {
@@ -784,14 +784,6 @@ static int __init early_enable_spdif(char *p)
 
 early_param("spdif", early_enable_spdif);
 
-static int __init early_enable_gpmi(char *p)
-{
-	gpmi_en = 1;
-	return 0;
-}
-
-early_param("gpmi", early_enable_gpmi);
-
 static int __init early_enable_can(char *p)
 {
 	flexcan_en = 1;
@@ -1024,8 +1016,7 @@ static void __init cm_fx6_init(void)
 	imx6q_add_viim();
 	imx6q_add_imx2_wdt(0, NULL);
 	imx6q_add_dma();
-	if (gpmi_en)
-		imx6q_add_gpmi(&mx6_gpmi_nand_platform_data);
+	imx6q_add_gpmi(&cm_fx6_gpmi_nand_pdata);
 
 	imx6q_add_dvfs_core(&cm_fx6_dvfscore_data);
 
