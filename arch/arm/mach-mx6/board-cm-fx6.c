@@ -195,7 +195,7 @@ static int __init gpmi_nand_platform_init(void)
 
 	if (cpu_is_mx6q()) {
 		nand_pads = mx6q_gpmi_nand;
-		nand_pads_cnt = ARRAY_SIZE(mx6dl_gpmi_nand);
+		nand_pads_cnt = ARRAY_SIZE(mx6q_gpmi_nand);
 	} else if (cpu_is_mx6dl()) {
 		nand_pads = mx6dl_gpmi_nand;
 		nand_pads_cnt = ARRAY_SIZE(mx6dl_gpmi_nand);
@@ -205,23 +205,25 @@ static int __init gpmi_nand_platform_init(void)
 	return mxc_iomux_v3_setup_multiple_pads(nand_pads, nand_pads_cnt);
 }
 
+static struct mtd_partition gpmi_nand_partitions[] = {
+	{
+		.name	= "nand",
+		.offset	= 0,
+		.size	= MTDPART_SIZ_FULL,
+	},
+};
+
 static struct gpmi_nand_platform_data
 mx6_gpmi_nand_platform_data __initdata = {
 	.platform_init           = gpmi_nand_platform_init,
 	.min_prop_delay_in_ns    = 5,
 	.max_prop_delay_in_ns    = 9,
 	.max_chip_count          = 1,
+	.partitions		 = gpmi_nand_partitions,
+	.partition_count	 = ARRAY_SIZE(gpmi_nand_partitions),
 	.enable_bbt              = 1,
 	.enable_ddr              = 0,
 };
-
-static int __init board_support_onfi_nand(char *p)
-{
-	mx6_gpmi_nand_platform_data.enable_ddr = 1;
-	return 0;
-}
-
-early_param("onfi_support", board_support_onfi_nand);
 
 static const struct anatop_thermal_platform_data
 	cm_fx6_anatop_thermal_data __initconst = {
