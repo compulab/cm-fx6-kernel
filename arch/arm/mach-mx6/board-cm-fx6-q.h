@@ -106,6 +106,8 @@ static iomux_v3_cfg_t cm_fx6_q_pads[] = {
 	MX6Q_PAD_DISP0_DAT22__IPU1_DISP0_DAT_22,
 	MX6Q_PAD_DISP0_DAT23__IPU1_DISP0_DAT_23,
 
+#if 0
+	/* interfering pads - exclude now, resolve later */
 	/* UART2 */
 	MX6Q_PAD_EIM_D26__UART2_RXD,
 	MX6Q_PAD_EIM_D27__UART2_TXD,
@@ -114,6 +116,7 @@ static iomux_v3_cfg_t cm_fx6_q_pads[] = {
 
 	/* PWM1 */
 	MX6Q_PAD_GPIO_9__PWM1_PWMO,
+#endif
 
 	/* USBOTG ID pin */
 	MX6Q_PAD_GPIO_1__USBOTG_ID,
@@ -128,6 +131,17 @@ static iomux_v3_cfg_t cm_fx6_q_pads[] = {
 
 	/* USB hub reset */
 	MX6Q_PAD_SD3_RST__GPIO_7_8,
+
+	/* iSSD SATA flash storage -- MX6Q only */
+	MX6Q_PAD_ENET_TX_EN__GPIO_1_28,	/* PWREN */
+	MX6Q_PAD_EIM_A22__GPIO_2_16,	/* LDO_EN */
+	MX6Q_PAD_EIM_D20__GPIO_3_20,	/* nSTDBY1 */
+	MX6Q_PAD_EIM_A25__GPIO_5_2,	/* nSTDBY2 */
+	MX6Q_PAD_ENET_TXD0__GPIO_1_30,	/* VDDC_CTRL */
+	MX6Q_PAD_EIM_D23__GPIO_3_23,	/* PHY_SLP */
+	MX6Q_PAD_EIM_D29__GPIO_3_29,	/* STBY_REQ */
+	MX6Q_PAD_EIM_A23__GPIO_6_6,	/* nRSTDLY */
+	MX6Q_PAD_EIM_BCLK__GPIO_6_31,	/* PWLOSS_INT */
 };
 
 static iomux_v3_cfg_t cm_fx6_q_i2c3_pads[] = {

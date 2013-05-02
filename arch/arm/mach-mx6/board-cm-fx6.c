@@ -78,11 +78,20 @@
 
 /* GPIO PIN, sort by PORT/BIT */
 #define CM_FX6_LDB_BACKLIGHT		IMX_GPIO_NR(1, 9)
+#define CM_FX6_iSSD_SATA_PWREN		IMX_GPIO_NR(1, 28)
+#define CM_FX6_iSSD_SATA_VDDC_CTRL	IMX_GPIO_NR(1, 30)
+#define CM_FX6_iSSD_SATA_LDO_EN		IMX_GPIO_NR(2, 16)
 #define CM_FX6_ECSPI1_CS0		IMX_GPIO_NR(2, 30)
 #define CM_FX6_GREEN_LED		IMX_GPIO_NR(2, 31)
 #define CM_FX6_ECSPI1_CS1		IMX_GPIO_NR(3, 19)
+#define CM_FX6_iSSD_SATA_nSTDBY1	IMX_GPIO_NR(3, 20)
 #define CM_FX6_USB_OTG_PWR		IMX_GPIO_NR(3, 22)
+#define CM_FX6_iSSD_SATA_PHY_SLP	IMX_GPIO_NR(3, 23)
+#define CM_FX6_iSSD_SATA_STBY_REQ	IMX_GPIO_NR(3, 29)
+#define CM_FX6_iSSD_SATA_nSTDBY2	IMX_GPIO_NR(5, 2)
 #define CM_FX6_CAN2_EN			IMX_GPIO_NR(5, 24)
+#define CM_FX6_iSSD_SATA_nRSTDLY	IMX_GPIO_NR(6, 6)
+#define CM_FX6_iSSD_SATA_PWLOSS_INT	IMX_GPIO_NR(6, 31)
 #define CM_FX6_SD3_WP			IMX_GPIO_NR(7, 0)
 #define CM_FX6_SD3_CD			IMX_GPIO_NR(7, 1)
 #define CM_FX6_USBHUB_nRST		IMX_GPIO_NR(7, 8)
@@ -448,6 +457,62 @@ static struct viv_gpu_platform_data imx6_gpu_pdata __initdata = {
 	.reserved_mem_size = SZ_128M + SZ_64M,
 };
 
+
+static struct gpio sata_issd_gpios[] = {
+
+	{ CM_FX6_iSSD_SATA_VDDC_CTRL,	GPIOF_IN,		"sata vddc ctrl" },
+	{ CM_FX6_iSSD_SATA_STBY_REQ,	GPIOF_IN,		"sata stby req" },
+	{ CM_FX6_iSSD_SATA_PWLOSS_INT,	GPIOF_IN,		"sata pwloss int" },
+
+	{ CM_FX6_iSSD_SATA_PHY_SLP,	GPIOF_OUT_INIT_LOW,	"sata phy slp" },
+	{ CM_FX6_iSSD_SATA_nRSTDLY,	GPIOF_OUT_INIT_LOW,	"sata nrst" },
+
+	/* keep the order of power sequence ! */
+	{ CM_FX6_iSSD_SATA_PWREN,	GPIOF_OUT_INIT_LOW,	"sata pwren" },		// VCC_IO
+	{ CM_FX6_iSSD_SATA_nSTDBY1,	GPIOF_OUT_INIT_LOW,	"sata nstdby1" },	// VCC_FLASH
+	{ CM_FX6_iSSD_SATA_nSTDBY2,	GPIOF_OUT_INIT_LOW,	"sata nstdby2" },	// VCCQ
+	{ CM_FX6_iSSD_SATA_LDO_EN,	GPIOF_OUT_INIT_LOW,	"sata ldo en" },	// VDCC
+};
+
+static int cm_fx6_iSSD_init(void)
+{
+	int i;
+	int err;
+
+	err = gpio_request_array(sata_issd_gpios, ARRAY_SIZE(sata_issd_gpios));
+	if (err)
+		return err;
+
+	for (i = 0; i < ARRAY_SIZE(sata_issd_gpios); ++i) {
+		if (sata_issd_gpios[i].flags & GPIOF_DIR_IN)
+			continue;
+
+		udelay(100);
+		gpio_set_value(sata_issd_gpios[i].gpio, 1);
+	}
+
+	/*
+	 * TODO:
+	 * implement logic associated with input signals
+	 */
+
+	return 0;
+}
+
+static void cm_fx6_iSSD_cleanup(void)
+{
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(sata_issd_gpios); ++i) {
+		if (sata_issd_gpios[i].flags & GPIOF_DIR_IN)
+			continue;
+
+		gpio_set_value(sata_issd_gpios[i].gpio, 0);
+	}
+
+	gpio_free_array(sata_issd_gpios, ARRAY_SIZE(sata_issd_gpios));
+}
+
 /* HW Initialization, if return 0, initialization is successful. */
 static int cm_fx6_sata_init(struct device *dev, void __iomem *addr)
 {
@@ -455,14 +520,17 @@ static int cm_fx6_sata_init(struct device *dev, void __iomem *addr)
 	int ret = 0;
 	struct clk *clk;
 
-	/* Enable SATA PWR CTRL_0 of MAX7310 */
-	gpio_request(CM_FX6_MAX7310_1_BASE_ADDR, "SATA_PWR_EN");
-	gpio_direction_output(CM_FX6_MAX7310_1_BASE_ADDR, 1);
+	ret = cm_fx6_iSSD_init();
+	if (ret != 0) {
+		dev_err(dev, "could not acquire iSSD GPIO: %d \n", ret);
+		return ret;
+	}
 
 	sata_clk = clk_get(dev, "imx_sata_clk");
 	if (IS_ERR(sata_clk)) {
 		dev_err(dev, "no sata clock.\n");
-		return PTR_ERR(sata_clk);
+		ret = PTR_ERR(sata_clk);
+		goto release_drive;
 	}
 	ret = clk_enable(sata_clk);
 	if (ret) {
@@ -485,11 +553,15 @@ static int cm_fx6_sata_init(struct device *dev, void __iomem *addr)
 	 *.tx_edgerate_0(iomuxc_gpr13[0]),
 	 */
 	tmpdata = readl(IOMUXC_GPR13);
-	writel(((tmpdata & ~0x07FFFFFD) | 0x0593A044), IOMUXC_GPR13);
+	tmpdata &= ~0x07FFFFFD;
+	tmpdata |= 0x0593A4C4;		// 3.0 Gbps
+	// tmpdata |= 0x059324C4;	// 1.5 Gbps
+	writel(tmpdata, IOMUXC_GPR13);
 
 	/* enable SATA_PHY PLL */
 	tmpdata = readl(IOMUXC_GPR13);
-	writel(((tmpdata & ~0x2) | 0x2), IOMUXC_GPR13);
+	tmpdata |= 0x2;
+	writel(tmpdata, IOMUXC_GPR13);
 
 	/* Get the AHB clock rate, and configure the TIMER1MS reg later */
 	clk = clk_get(NULL, "ahb");
@@ -509,9 +581,8 @@ release_sata_clk:
 	clk_disable(sata_clk);
 put_sata_clk:
 	clk_put(sata_clk);
-	/* Disable SATA PWR CTRL_0 of MAX7310 */
-	gpio_request(CM_FX6_MAX7310_1_BASE_ADDR, "SATA_PWR_EN");
-	gpio_direction_output(CM_FX6_MAX7310_1_BASE_ADDR, 0);
+release_drive:
+	cm_fx6_iSSD_cleanup();
 
 	return ret;
 }
@@ -521,10 +592,7 @@ static void cm_fx6_sata_exit(struct device *dev)
 	clk_disable(sata_clk);
 	clk_put(sata_clk);
 
-	/* Disable SATA PWR CTRL_0 of MAX7310 */
-	gpio_request(CM_FX6_MAX7310_1_BASE_ADDR, "SATA_PWR_EN");
-	gpio_direction_output(CM_FX6_MAX7310_1_BASE_ADDR, 0);
-
+	cm_fx6_iSSD_cleanup();
 }
 
 static struct ahci_platform_data cm_fx6_sata_data = {
