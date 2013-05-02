@@ -31,6 +31,7 @@
 #include <linux/spi/flash.h>
 #include <linux/i2c.h>
 #include <linux/i2c/pca953x.h>
+#include <linux/i2c/at24.h>
 #include <linux/ata.h>
 #include <linux/mtd/mtd.h>
 #include <linux/mtd/map.h>
@@ -356,6 +357,39 @@ static void spi_device_init(void)
 }
 
 #if defined(CONFIG_I2C_IMX)
+/** 
+ * this implementation is provided as a reference 
+ */
+static void eeprom_at24_read_write(struct memory_accessor *a, void *context)
+{
+	int ret;
+	char inbuff[24];
+#if 0
+	char outbuff[] = "CompuLab";
+
+	ret = a->write(a, outbuff, 0, 9);
+	if (ret < 0) {
+		pr_err("%s: could not write EEPROM: %d \n", __FUNCTION__, ret);
+	}
+#endif
+
+	ret = a->read(a, inbuff, 0, 9);
+	inbuff[8] = '\0';	// against evil eye
+	if (ret < 0) {
+		pr_err("%s: could not read EEPROM: %d \n", __FUNCTION__, ret);
+		return;
+	}
+	pr_info("%s: read EEPROM: %s \n", __FUNCTION__, inbuff);
+}
+
+static struct at24_platform_data eeprom_24c02 = {
+	.byte_len	= 256,
+	.page_size	= 8,
+	.flags		= AT24_FLAG_IRUGO,
+	.setup		= eeprom_at24_read_write,
+	.context	= NULL,
+};
+
 static int max7310_1_setup(struct i2c_client *client,
 	unsigned gpio_base, unsigned ngpio,
 	void *context)
@@ -396,7 +430,13 @@ static struct imxi2c_platform_data cm_fx6_i2c2_data = {
 };
 
 static struct i2c_board_info mxc_i2c0_board_info[] __initdata = {
-	/* FIXME */
+#ifdef CONFIG_EEPROM_AT24
+	{
+		/* EEPROM on the base board: 24c02 */
+		I2C_BOARD_INFO("24c02", 0x50),
+		.platform_data = &eeprom_24c02,
+	},
+#endif
 };
 
 static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
@@ -410,6 +450,13 @@ static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
 		I2C_BOARD_INFO("max7310", 0x1F),
 		.platform_data = &max7310_platdata,
 	},
+#ifdef CONFIG_EEPROM_AT24
+	{
+		/* ID EEPROM on the module board: 24c02 */
+		I2C_BOARD_INFO("24c02", 0x50),
+		.platform_data = &eeprom_24c02,
+	},
+#endif
 };
 
 static void __init cm_fx6_init_i2c(void)
