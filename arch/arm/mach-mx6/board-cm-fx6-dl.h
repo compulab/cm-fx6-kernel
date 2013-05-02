@@ -54,13 +54,17 @@ static iomux_v3_cfg_t cm_fx6_dl_pads[] = {
 	MX6DL_PAD_EIM_D24__GPIO_3_24,	/* SS2 */
 	MX6DL_PAD_EIM_D25__GPIO_3_25,	/* SS3 */
 
-	/* I2C1 */
-	MX6DL_PAD_CSI0_DAT8__I2C1_SDA,
-	MX6DL_PAD_CSI0_DAT9__I2C1_SCL,
+	/* I2C1 - to base board */
+	MX6DL_PAD_EIM_D28__I2C1_SDA,
+	MX6DL_PAD_EIM_D21__I2C1_SCL,
 
-	/* I2C2 */
+	/* I2C2 - to base board */
 	MX6DL_PAD_KEY_COL3__I2C2_SCL,
 	MX6DL_PAD_KEY_ROW3__I2C2_SDA,
+
+	/* I2C3 */
+	MX6DL_PAD_GPIO_3__I2C3_SCL,
+	MX6DL_PAD_GPIO_6__I2C3_SDA,
 
 	/* DISPLAY */
 	MX6DL_PAD_DI0_DISP_CLK__IPU1_DI0_DISP_CLK,
@@ -104,11 +108,6 @@ static iomux_v3_cfg_t cm_fx6_dl_pads[] = {
 	MX6DL_PAD_SD3_RST__GPIO_7_8,
 	/* USBH1 power */
 	MX6DL_PAD_GPIO_0__GPIO_1_0,
-};
-
-static iomux_v3_cfg_t cm_fx6_dl_i2c3_pads[] = {
-	MX6DL_PAD_GPIO_5__I2C3_SCL,
-	MX6DL_PAD_GPIO_16__I2C3_SDA,
 };
 
 static iomux_v3_cfg_t cm_fx6_dl_spdif_pads[] = {
