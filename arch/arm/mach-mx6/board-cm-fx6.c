@@ -103,6 +103,9 @@
 
 #define SB_FX6_IO_EXP_GPIO(x)		(SB_FX6_PCA9555_BASE_ADDR + (x))
 
+#define SB_FX6_DVIT_nPD			SB_FX6_IO_EXP_GPIO(2)
+#define SB_FX6_DVIT_MSEN		SB_FX6_IO_EXP_GPIO(3)
+
 #define CM_FX6_PCIE_PWR_EN		SB_FX6_IO_EXP_GPIO(14)
 #define CM_FX6_PCIE_RESET		SB_FX6_IO_EXP_GPIO(14)
 
@@ -685,15 +688,9 @@ static struct imx_asrc_platform_data imx_asrc_data = {
 static struct ipuv3_fb_platform_data sabr_fb_data[] = {
 	{ /*fb0*/
 	.disp_dev		= "ldb",
-	.interface_pix_fmt	= IPU_PIX_FMT_RGB666,
+	.interface_pix_fmt	= IPU_PIX_FMT_RGB24,
 	.mode_str		= "LDB-XGA",
-	.default_bpp		= 16,
-	.int_clk		= false,
-	}, {
-	.disp_dev		= "ldb",
-	.interface_pix_fmt	= IPU_PIX_FMT_RGB666,
-	.mode_str		= "LDB-XGA",
-	.default_bpp		= 16,
+	.default_bpp		= 24,
 	.int_clk		= false,
 	}, {
 	.disp_dev		= "lcd",
@@ -746,7 +743,7 @@ static struct fsl_mxc_lcd_platform_data lcdif_data = {
 };
 
 static struct fsl_mxc_ldb_platform_data ldb_data = {
-	.ipu_id		= 1,
+	.ipu_id		= 0,
 	.disp_id	= 0,
 	.ext_ref	= 1,
 	.mode		= LDB_SEP0,
@@ -1014,12 +1011,47 @@ static inline void cm_fx6_init_led(void) {}
 #endif
 
 
+static void cm_fx6_init_display(void)
+{
+	int i;
+
+	/* 
+	 * initialize DVI transmitter on the base board (SiI164C)
+	 * TODO:
+	 * handle display detection via DVIT_MSEN pin
+	 */
+	gpio_request(SB_FX6_DVIT_nPD, "dvi trans pwrdown");
+	gpio_request(SB_FX6_DVIT_MSEN, "dvi trans disp detected");
+	gpio_direction_output(SB_FX6_DVIT_nPD, 1);
+	gpio_direction_input(SB_FX6_DVIT_MSEN);
+
+
+	imx6q_add_mxc_hdmi_core(&hdmi_core_data);
+
+	imx6q_add_ipuv3(0, &ipu_data[0]);
+	if (cpu_is_mx6q())
+		imx6q_add_ipuv3(1, &ipu_data[1]);
+
+	if (cpu_is_mx6dl()) {
+		for (i = 0; i < ARRAY_SIZE(sabr_fb_data) / 2; i++)
+			imx6q_add_ipuv3fb(i, &sabr_fb_data[i]);
+	} else {
+		for (i = 0; i < ARRAY_SIZE(sabr_fb_data); i++)
+			imx6q_add_ipuv3fb(i, &sabr_fb_data[i]);
+	}
+
+	imx6q_add_vdoa();
+	imx6q_add_lcdif(&lcdif_data);
+	imx6q_add_ldb(&ldb_data);
+	imx6q_add_v4l2_output(0);
+}
+
+
 /*!
  * Board specific initialization.
  */
 static void __init cm_fx6_init(void)
 {
-	int i;
 	int ret;
 
 	iomux_v3_cfg_t *common_pads = NULL;
@@ -1084,27 +1116,7 @@ static void __init cm_fx6_init(void)
 	pu_reg_id = arm2_dvfscore_data.pu_id;
 	cm_fx6_init_uart();
 
-
-	imx6q_add_mxc_hdmi_core(&hdmi_core_data);
-
-	imx6q_add_ipuv3(0, &ipu_data[0]);
-	if (cpu_is_mx6q())
-		imx6q_add_ipuv3(1, &ipu_data[1]);
-
-	if (cpu_is_mx6dl()) {
-		ldb_data.ipu_id = 0;
-		ldb_data.disp_id = 0;
-		for (i = 0; i < ARRAY_SIZE(sabr_fb_data) / 2; i++)
-			imx6q_add_ipuv3fb(i, &sabr_fb_data[i]);
-	} else {
-		for (i = 0; i < ARRAY_SIZE(sabr_fb_data); i++)
-			imx6q_add_ipuv3fb(i, &sabr_fb_data[i]);
-	}
-
-	imx6q_add_vdoa();
-	imx6q_add_lcdif(&lcdif_data);
-	imx6q_add_ldb(&ldb_data);
-	imx6q_add_v4l2_output(0);
+	cm_fx6_init_display();
 
 	imx6q_add_imx_snvs_rtc();
 
