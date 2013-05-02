@@ -98,16 +98,15 @@
 #define CM_FX6_USBHUB_nRST		IMX_GPIO_NR(7, 8)
 #define CM_FX6_CAN1_STBY		IMX_GPIO_NR(7, 12)
 #define CM_FX6_CAN1_EN			IMX_GPIO_NR(7, 13)
-#define CM_FX6_MAX7310_1_BASE_ADDR	IMX_GPIO_NR(8, 0)
-#define CM_FX6_MAX7310_2_BASE_ADDR	IMX_GPIO_NR(8, 8)
 
-#define CM_FX6_IO_EXP_GPIO1(x)	(CM_FX6_MAX7310_1_BASE_ADDR + (x))
-#define CM_FX6_IO_EXP_GPIO2(x)	(CM_FX6_MAX7310_2_BASE_ADDR + (x))
+#define SB_FX6_PCA9555_BASE_ADDR	IMX_GPIO_NR(8, 0)
 
-#define CM_FX6_PCIE_PWR_EN		CM_FX6_IO_EXP_GPIO1(2)
-#define CM_FX6_PCIE_RESET		CM_FX6_IO_EXP_GPIO2(2)
+#define SB_FX6_IO_EXP_GPIO(x)		(SB_FX6_PCA9555_BASE_ADDR + (x))
 
-#define CM_FX6_CAN2_STBY		CM_FX6_IO_EXP_GPIO2(1)
+#define CM_FX6_PCIE_PWR_EN		SB_FX6_IO_EXP_GPIO(14)
+#define CM_FX6_PCIE_RESET		SB_FX6_IO_EXP_GPIO(14)
+
+#define CM_FX6_CAN2_STBY		SB_FX6_IO_EXP_GPIO(14)
 
 
 #define BMCR_PDOWN			0x0800 /* PHY Powerdown */
@@ -390,31 +389,41 @@ static struct at24_platform_data eeprom_24c02 = {
 	.context	= NULL,
 };
 
-static int max7310_1_setup(struct i2c_client *client,
-	unsigned gpio_base, unsigned ngpio,
-	void *context)
+
+static int pca9555_setup(struct i2c_client *client,
+			 unsigned gpio_base, unsigned ngpio,
+			 void *context)
 {
-	int max7310_gpio_value[] = { 0, 1, 0, 1, 0, 0, 0, 0 };
+	int i;
+	/* GPIO value:
+	 * 0   - skip
+	 * < 0 - set to input
+	 * > 0 - set to output, with value (gpio_value - 1)
+	 */
+	static int gpio_value[] = {2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2};
 
-	int n;
+	pr_info("%s: init GPIO range %u..%u \n", __FUNCTION__, gpio_base, (gpio_base + ngpio));
+	for (i = 0; i < ARRAY_SIZE(gpio_value); ++i) {
+		if (gpio_value[i] == 0)
+			continue;
 
-	 for (n = 0; n < ARRAY_SIZE(max7310_gpio_value); ++n) {
-		gpio_request(gpio_base + n, "MAX7310 1 GPIO Expander");
-		if (max7310_gpio_value[n] < 0)
-			gpio_direction_input(gpio_base + n);
-		else
-			gpio_direction_output(gpio_base + n,
-						max7310_gpio_value[n]);
-		gpio_export(gpio_base + n, 0);
+		gpio_request((gpio_base + i), "PCA9555 GPIO Expander");
+		if (gpio_value[i] < 0) {
+			gpio_direction_input(gpio_base + i);
+		}
+		else {
+			gpio_direction_output((gpio_base + i), (gpio_value[i] - 1));
+		}
+		gpio_export((gpio_base + i), 0);
 	}
 
 	return 0;
 }
 
-static struct pca953x_platform_data max7310_platdata = {
-	.gpio_base	= CM_FX6_MAX7310_1_BASE_ADDR,
+static struct pca953x_platform_data sb_fx6_gpio_expander_data = {
+	.gpio_base	= SB_FX6_PCA9555_BASE_ADDR,
 	.invert		= 0,
-	.setup		= max7310_1_setup,
+	.setup		= pca9555_setup,
 };
 
 static struct imxi2c_platform_data cm_fx6_i2c0_data = {
@@ -437,6 +446,12 @@ static struct i2c_board_info mxc_i2c0_board_info[] __initdata = {
 		.platform_data = &eeprom_24c02,
 	},
 #endif
+#ifdef CONFIG_GPIO_PCA953X
+	{
+		I2C_BOARD_INFO("pca9555", 0x26),
+		.platform_data = &sb_fx6_gpio_expander_data,
+	},
+#endif
 };
 
 static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
@@ -446,10 +461,6 @@ static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
 };
 
 static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
-	{
-		I2C_BOARD_INFO("max7310", 0x1F),
-		.platform_data = &max7310_platdata,
-	},
 #ifdef CONFIG_EEPROM_AT24
 	{
 		/* ID EEPROM on the module board: 24c02 */
