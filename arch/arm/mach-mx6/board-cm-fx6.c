@@ -355,6 +355,7 @@ static void spi_device_init(void)
 				ARRAY_SIZE(cm_fx6_spi0_board_info));
 }
 
+#if defined(CONFIG_I2C_IMX)
 static int max7310_1_setup(struct i2c_client *client,
 	unsigned gpio_base, unsigned ngpio,
 	void *context)
@@ -382,10 +383,6 @@ static struct pca953x_platform_data max7310_platdata = {
 	.setup		= max7310_1_setup,
 };
 
-static struct i2c_board_info mxc_i2c0_board_info[] __initdata = {
-	/* FIXME */
-};
-
 static struct imxi2c_platform_data cm_fx6_i2c0_data = {
 	.bitrate = 100000,
 };
@@ -398,11 +395,8 @@ static struct imxi2c_platform_data cm_fx6_i2c2_data = {
 	.bitrate = 400000,
 };
 
-static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
-	{
-		I2C_BOARD_INFO("max7310", 0x1F),
-		.platform_data = &max7310_platdata,
-	},
+static struct i2c_board_info mxc_i2c0_board_info[] __initdata = {
+	/* FIXME */
 };
 
 static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
@@ -410,6 +404,31 @@ static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
 		I2C_BOARD_INFO("mxc_hdmi_i2c", 0x50),
 	},
 };
+
+static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
+	{
+		I2C_BOARD_INFO("max7310", 0x1F),
+		.platform_data = &max7310_platdata,
+	},
+};
+
+static void __init cm_fx6_init_i2c(void)
+{
+	imx6q_add_imx_i2c(0, &cm_fx6_i2c0_data);
+	imx6q_add_imx_i2c(1, &cm_fx6_i2c1_data);
+	imx6q_add_imx_i2c(2, &cm_fx6_i2c2_data);
+	i2c_register_board_info(0, mxc_i2c0_board_info,
+				ARRAY_SIZE(mxc_i2c0_board_info));
+	i2c_register_board_info(1, mxc_i2c1_board_info,
+				ARRAY_SIZE(mxc_i2c1_board_info));
+	i2c_register_board_info(2, mxc_i2c2_board_info,
+				ARRAY_SIZE(mxc_i2c2_board_info));
+}
+
+#else
+
+static void cm_fx6_init_i2c(void) {}
+#endif	// CONFIG_I2C_IMX
 
 static void icm_fx6_usbotg_vbus(bool on)
 {
@@ -948,12 +967,10 @@ static void __init cm_fx6_init(void)
 	iomux_v3_cfg_t *common_pads = NULL;
 	iomux_v3_cfg_t *spdif_pads = NULL;
 	iomux_v3_cfg_t *flexcan_pads = NULL;
-	iomux_v3_cfg_t *i2c3_pads = NULL;
 
 	int common_pads_cnt;
 	int spdif_pads_cnt;
 	int flexcan_pads_cnt;
-	int i2c3_pads_cnt;
 
 
 	/*
@@ -965,42 +982,32 @@ static void __init cm_fx6_init(void)
 		common_pads = cm_fx6_q_pads;
 		spdif_pads = cm_fx6_q_spdif_pads;
 		flexcan_pads = cm_fx6_q_can_pads;
-		i2c3_pads = cm_fx6_q_i2c3_pads;
 
 		common_pads_cnt = ARRAY_SIZE(cm_fx6_q_pads);
 		spdif_pads_cnt =  ARRAY_SIZE(cm_fx6_q_spdif_pads);
 		flexcan_pads_cnt = ARRAY_SIZE(cm_fx6_q_can_pads);
-		i2c3_pads_cnt = ARRAY_SIZE(cm_fx6_q_i2c3_pads);
 	} else if (cpu_is_mx6dl()) {
 		common_pads = cm_fx6_dl_pads;
 		spdif_pads = cm_fx6_dl_spdif_pads;
 		flexcan_pads = cm_fx6_dl_can_pads;
-		i2c3_pads = cm_fx6_dl_i2c3_pads;
 
 		common_pads_cnt = ARRAY_SIZE(cm_fx6_dl_pads);
 		spdif_pads_cnt =  ARRAY_SIZE(cm_fx6_dl_spdif_pads);
 		flexcan_pads_cnt = ARRAY_SIZE(cm_fx6_dl_can_pads);
-		i2c3_pads_cnt = ARRAY_SIZE(cm_fx6_dl_i2c3_pads);
 	}
 
 	BUG_ON(!common_pads);
 	mxc_iomux_v3_setup_multiple_pads(common_pads, common_pads_cnt);
 
 	/*
-	 * IEEE-1588 ts_clk, S/PDIF in and i2c3 are mutually exclusive
-	 * because all of them use GPIO_16.
 	 * S/PDIF out and can1 stby are mutually exclusive because both
 	 * use GPIO_17.
 	 */
 	if (spdif_en) {
 		BUG_ON(!spdif_pads);
-		mxc_iomux_v3_setup_multiple_pads(spdif_pads, spdif_pads_cnt);
-	} else {
-		BUG_ON(!i2c3_pads);
-		mxc_iomux_v3_setup_multiple_pads(i2c3_pads, i2c3_pads_cnt);
+ 		mxc_iomux_v3_setup_multiple_pads(spdif_pads, spdif_pads_cnt);
 	}
-
-	if (!spdif_en && flexcan_en) {
+	else if (flexcan_en) {
 		BUG_ON(!flexcan_pads);
 		mxc_iomux_v3_setup_multiple_pads(flexcan_pads,
 						flexcan_pads_cnt);
@@ -1045,18 +1052,7 @@ static void __init cm_fx6_init(void)
 
 	imx6q_add_imx_caam();
 
-	imx6q_add_imx_i2c(0, &cm_fx6_i2c0_data);
-	imx6q_add_imx_i2c(1, &cm_fx6_i2c1_data);
-	i2c_register_board_info(0, mxc_i2c0_board_info,
-			ARRAY_SIZE(mxc_i2c0_board_info));
-	i2c_register_board_info(1, mxc_i2c1_board_info,
-			ARRAY_SIZE(mxc_i2c1_board_info));
-	if (!spdif_en) {
-		imx6q_add_imx_i2c(2, &cm_fx6_i2c2_data);
-		i2c_register_board_info(2, mxc_i2c2_board_info,
-				ARRAY_SIZE(mxc_i2c2_board_info));
-	}
-
+	cm_fx6_init_i2c();
 	cm_fx6_init_led();
 
 	/* SPI */
