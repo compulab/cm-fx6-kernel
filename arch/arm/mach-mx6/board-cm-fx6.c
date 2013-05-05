@@ -693,6 +693,12 @@ static struct ipuv3_fb_platform_data sabr_fb_data[] = {
 	.default_bpp		= 24,
 	.int_clk		= false,
 	}, {
+	.disp_dev		= "hdmi",
+	.interface_pix_fmt	= IPU_PIX_FMT_RGB32,
+	.mode_str		= "1920x1080M@60",
+	.default_bpp		= 32,
+	.int_clk		= false,
+	}, {
 	.disp_dev		= "lcd",
 	.interface_pix_fmt	= IPU_PIX_FMT_RGB565,
 	.mode_str		= "CLAA-WVGA",
@@ -706,6 +712,7 @@ static void hdmi_init(int ipu_id, int disp_id)
 	int hdmi_mux_setting;
 	int max_ipu_id = cpu_is_mx6q() ? 1 : 0;
 
+	pr_info("%s: [ipu:disp] = [%d:%d] \n", __FUNCTION__, ipu_id, disp_id);
 	if ((ipu_id > max_ipu_id) || (ipu_id < 0)) {
 		pr_err("Invalid IPU select for HDMI: %d. Set to 0\n", ipu_id);
 		ipu_id = 0;
