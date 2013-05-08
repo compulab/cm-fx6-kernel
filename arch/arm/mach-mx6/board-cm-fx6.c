@@ -123,12 +123,16 @@ static int flexcan_en;
 
 extern char *soc_reg_id;
 extern char *pu_reg_id;
+extern unsigned int system_rev;
 
 enum sd_pad_mode {
 	SD_PAD_MODE_LOW_SPEED,
 	SD_PAD_MODE_MED_SPEED,
 	SD_PAD_MODE_HIGH_SPEED,
 };
+
+static u32 fsl_system_rev(void);
+
 
 static int plt_sd_pad_change(unsigned int index, int clock)
 {
@@ -1082,6 +1086,14 @@ static void __init cm_fx6_init(void)
 	int flexcan_pads_cnt;
 
 
+	/* 
+	 * Override system revision number to meet conventions set by Freescale. 
+	 * According to Freescale, system revision should be set in this very 
+	 * way by U-Boot and be passed to the kernel via atags. 
+	 */
+	system_rev = fsl_system_rev();
+
+
 	/*
 	 * common pads: pads are non-shared with others on this board
 	 * feature_pds: pads are shared with others on this board
@@ -1254,6 +1266,60 @@ static void __init cm_fx6_reserve(void)
 	}
 #endif
 }
+
+
+/*
+ * Set fsl_system_rev:
+ * bit 0-7: Chip Revision ID
+ * bit 8-11: Board Revision ID
+ *     0: Unknown or latest revision
+ *     1: RevA Board
+ *     2: RevB board
+ *     3: RevC board
+ * bit 12-19: Chip Silicon ID
+ *     0x63: i.MX6 Dual/Quad
+ *     0x61: i.MX6 Solo/DualLite
+ *     0x60: i.MX6 SoloLite
+ */
+static u32 fsl_system_rev(void)
+{
+	/* Read Silicon information from Anatop register */
+	/* The register layout:
+	 * bit 16-23: Chip Silicon ID
+	 * 0x60: i.MX6 SoloLite
+	 * 0x61: i.MX6 Solo/DualLite
+	 * 0x63: i.MX6 Dual/Quad
+	 *
+	 * bit 0-7: Chip Revision ID
+	 * 0x00: TO1.0
+	 * 0x01: TO1.1
+	 * 0x02: TO1.2
+	 *
+	 * exp:
+	 * Chip             Major    Minor
+	 * i.MX6Q1.0:       6300     00
+	 * i.MX6Q1.1:       6300     01
+	 * i.MX6Solo1.0:    6100     00
+
+	 * Thus the system_rev will be the following layout:
+	 * | 31 - 20 | 19 - 12 | 11 - 8 | 7 - 0 |
+	 * | resverd | CHIP ID | BD REV | SI REV |
+	 */
+	u32 fsl_system_rev = 0;
+
+	u32 cpu_type = readl(IO_ADDRESS(ANATOP_BASE_ADDR + 0x260));
+
+	/* Chip Silicon ID */
+	fsl_system_rev = ((cpu_type >> 16) & 0xFF) << 12;
+	/* Chip silicon major revision */
+	fsl_system_rev |= ((cpu_type >> 8) & 0xFF) << 4;
+	fsl_system_rev += 0x10;
+	/* Chip silicon minor revision */
+	fsl_system_rev |= cpu_type & 0xFF;
+
+	return fsl_system_rev;
+}
+
 
 MACHINE_START(CM_FX6, "CompuLab i.MX6 CM-FX6 Module")
 	.boot_params	= MX6_PHYS_OFFSET + 0x100,
