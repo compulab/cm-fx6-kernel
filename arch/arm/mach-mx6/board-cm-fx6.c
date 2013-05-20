@@ -90,14 +90,11 @@
 #define CM_FX6_iSSD_SATA_PHY_SLP	IMX_GPIO_NR(3, 23)
 #define CM_FX6_iSSD_SATA_STBY_REQ	IMX_GPIO_NR(3, 29)
 #define CM_FX6_iSSD_SATA_nSTDBY2	IMX_GPIO_NR(5, 2)
-#define CM_FX6_CAN2_EN			IMX_GPIO_NR(5, 24)
 #define CM_FX6_iSSD_SATA_nRSTDLY	IMX_GPIO_NR(6, 6)
 #define CM_FX6_iSSD_SATA_PWLOSS_INT	IMX_GPIO_NR(6, 31)
 #define CM_FX6_SD3_WP			IMX_GPIO_NR(7, 0)
 #define CM_FX6_SD3_CD			IMX_GPIO_NR(7, 1)
 #define CM_FX6_USBHUB_nRST		IMX_GPIO_NR(7, 8)
-#define CM_FX6_CAN1_STBY		IMX_GPIO_NR(7, 12)
-#define CM_FX6_CAN1_EN			IMX_GPIO_NR(7, 13)
 
 #define SB_FX6_PCA9555_BASE_ADDR	IMX_GPIO_NR(8, 0)
 
@@ -108,8 +105,6 @@
 
 #define CM_FX6_PCIE_PWR_EN		SB_FX6_IO_EXP_GPIO(14)
 #define CM_FX6_PCIE_RESET		SB_FX6_IO_EXP_GPIO(14)
-
-#define CM_FX6_CAN2_STBY		SB_FX6_IO_EXP_GPIO(14)
 
 
 #define BMCR_PDOWN			0x0800 /* PHY Powerdown */
@@ -802,40 +797,15 @@ static struct ion_platform_data imx_ion_data = {
 	},
 };
 
-static struct gpio mx6_flexcan_gpios[] = {
-	{ CM_FX6_CAN1_EN, GPIOF_OUT_INIT_LOW, "flexcan1-en" },
-	{ CM_FX6_CAN1_STBY, GPIOF_OUT_INIT_LOW, "flexcan1-stby" },
-	{ CM_FX6_CAN2_EN, GPIOF_OUT_INIT_LOW, "flexcan2-en" },
-};
-
+/* enable CAN transceiver */
 static void mx6_flexcan0_switch(int enable)
 {
-	if (enable) {
-		gpio_set_value(CM_FX6_CAN1_EN, 1);
-		gpio_set_value(CM_FX6_CAN1_STBY, 1);
-	} else {
-		gpio_set_value(CM_FX6_CAN1_EN, 0);
-		gpio_set_value(CM_FX6_CAN1_STBY, 0);
-	}
+	pr_info("FlexCAN %s \n", (enable ? "ON" : "OFF"));
 }
 
-static void mx6_flexcan1_switch(int enable)
-{
-	if (enable) {
-		gpio_set_value(CM_FX6_CAN2_EN, 1);
-		gpio_set_value_cansleep(CM_FX6_CAN2_STBY, 1);
-	} else {
-		gpio_set_value(CM_FX6_CAN2_EN, 0);
-		gpio_set_value_cansleep(CM_FX6_CAN2_STBY, 0);
-	}
-}
-
-static const struct flexcan_platform_data
-		cm_fx6_flexcan_pdata[] __initconst = {
+static const struct flexcan_platform_data cm_fx6_flexcan_pdata[] __initconst = {
 	{
 		.transceiver_switch = mx6_flexcan0_switch,
-	}, {
-		.transceiver_switch = mx6_flexcan1_switch,
 	}
 };
 
@@ -1075,8 +1045,6 @@ static void cm_fx6_init_display(void)
  */
 static void __init cm_fx6_init(void)
 {
-	int ret;
-
 	iomux_v3_cfg_t *common_pads = NULL;
 	iomux_v3_cfg_t *spdif_pads = NULL;
 	iomux_v3_cfg_t *flexcan_pads = NULL;
@@ -1120,15 +1088,12 @@ static void __init cm_fx6_init(void)
 	BUG_ON(!common_pads);
 	mxc_iomux_v3_setup_multiple_pads(common_pads, common_pads_cnt);
 
-	/*
-	 * S/PDIF out and can1 stby are mutually exclusive because both
-	 * use GPIO_17.
-	 */
 	if (spdif_en) {
 		BUG_ON(!spdif_pads);
  		mxc_iomux_v3_setup_multiple_pads(spdif_pads, spdif_pads_cnt);
 	}
-	else if (flexcan_en) {
+
+	if (flexcan_en) {
 		BUG_ON(!flexcan_pads);
 		mxc_iomux_v3_setup_multiple_pads(flexcan_pads,
 						flexcan_pads_cnt);
@@ -1204,15 +1169,11 @@ static void __init cm_fx6_init(void)
 		imx6q_add_spdif(&mxc_spdif_data);
 		imx6q_add_spdif_dai();
 		imx6q_add_spdif_audio_device();
-	} else if (flexcan_en) {
-		ret = gpio_request_array(mx6_flexcan_gpios,
-				ARRAY_SIZE(mx6_flexcan_gpios));
-		if (ret) {
-			pr_err("failed to request flexcan-gpios: %d\n", ret);
-		} else {
-			imx6q_add_flexcan0(&cm_fx6_flexcan_pdata[0]);
-			imx6q_add_flexcan1(&cm_fx6_flexcan_pdata[1]);
-		}
+	}
+
+	if (flexcan_en) {
+		/* can1 can optionally be supported */
+		imx6q_add_flexcan0(&cm_fx6_flexcan_pdata[0]);
 	}
 
 	imx6q_add_hdmi_soc();
