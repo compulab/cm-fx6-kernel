@@ -119,6 +119,10 @@ static iomux_v3_cfg_t cm_fx6_q_pads[] = {
 	/* LCD PWM backlight */
 	MX6Q_PAD_SD4_DAT1__PWM3_PWMO,
 
+	/* CAN1 */
+	MX6Q_PAD_KEY_COL2__CAN1_TXCAN,
+	MX6Q_PAD_KEY_ROW2__CAN1_RXCAN,
+
 	/* iSSD SATA flash storage -- MX6Q only */
 	MX6Q_PAD_ENET_TX_EN__GPIO_1_28,	/* PWREN */
 	MX6Q_PAD_EIM_A22__GPIO_2_16,	/* LDO_EN */
@@ -135,19 +139,6 @@ static iomux_v3_cfg_t cm_fx6_q_spdif_pads[] = {
 	/* SPDIF */
 	MX6Q_PAD_GPIO_16__SPDIF_IN1,
 	MX6Q_PAD_GPIO_17__SPDIF_OUT1,
-};
-
-static iomux_v3_cfg_t cm_fx6_q_can_pads[] = {
-	/* CAN1 */
-	MX6Q_PAD_GPIO_7__CAN1_TXCAN,
-	MX6Q_PAD_KEY_ROW2__CAN1_RXCAN,
-	MX6Q_PAD_GPIO_17__GPIO_7_12,	/* CAN1 STBY */
-	MX6Q_PAD_GPIO_18__GPIO_7_13,	/* CAN1 EN */
-
-	/* CAN2 */
-	MX6Q_PAD_KEY_COL4__CAN2_TXCAN,
-	MX6Q_PAD_KEY_ROW4__CAN2_RXCAN,
-	MX6Q_PAD_CSI0_DAT6__GPIO_5_24,	/* CAN2 EN */
 };
 
 static iomux_v3_cfg_t cm_fx6_q_audmux_pads[] = {
