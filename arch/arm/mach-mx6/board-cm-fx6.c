@@ -362,12 +362,10 @@ static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
 	},
 };
 
-static void icm_fx6_usbotg_vbus(bool on)
+static void cm_fx6_usbotg_vbus(bool on)
 {
-	if (on)
-		gpio_set_value(CM_FX6_USB_OTG_PWR, 1);
-	else
-		gpio_set_value(CM_FX6_USB_OTG_PWR, 0);
+	pr_info("USB-OTG VBus %s \n", (on ? "ON" : "OFF"));
+	gpio_set_value(CM_FX6_USB_OTG_PWR, (on ? 1 : 0));
 }
 
 static void __init cm_fx6_init_usb(void)
@@ -399,15 +397,16 @@ static void __init cm_fx6_init_usb(void)
 	 * or it will affect signal quality at dp.
 	 */
 
-	ret = gpio_request(CM_FX6_USB_OTG_PWR, "usb-pwr");
+	ret = gpio_request_one(CM_FX6_USB_OTG_PWR, GPIOF_INIT_LOW, "usb-pwr");
 	if (ret) {
-		pr_err("failed to get GPIO CM_FX6_USB_OTG_PWR:%d\n", ret);
+		pr_err("failed to request USB_OTG_PWR GPIO: %d \n", ret);
 		return;
 	}
-	gpio_direction_output(CM_FX6_USB_OTG_PWR, 0);
-	mxc_iomux_set_gpr_register(1, 13, 1, 1);
 
-	mx6_set_otghost_vbus_func(icm_fx6_usbotg_vbus);
+	/* usb-otg-id pin iomux select */
+	mxc_iomux_set_gpr_register(1, 13, 1, 0);
+
+	mx6_set_otghost_vbus_func(cm_fx6_usbotg_vbus);
 }
 
 static struct viv_gpu_platform_data imx6_gpu_pdata __initdata = {
