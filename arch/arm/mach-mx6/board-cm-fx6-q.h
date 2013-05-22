@@ -122,8 +122,10 @@ static iomux_v3_cfg_t cm_fx6_q_pads[] = {
 	MX6Q_PAD_GPIO_9__PWM1_PWMO,
 #endif
 
-	/* USBOTG ID pin */
-	MX6Q_PAD_GPIO_1__USBOTG_ID,
+	/* USB-OTG */
+	MX6Q_PAD_ENET_RX_ER__ANATOP_USBOTG_ID,
+	MX6Q_PAD_EIM_D22__GPIO_3_22,
+	MX6Q_PAD_KEY_COL4__USBOH3_USBOTG_OC,
 
 #if 0
 	/* interfering pads - exclude now, resolve later */
