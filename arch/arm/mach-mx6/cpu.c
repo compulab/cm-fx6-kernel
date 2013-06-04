@@ -33,7 +33,7 @@
 
 struct cpu_op *(*get_cpu_op)(int *op);
 bool enable_wait_mode = true;
-u32 arm_max_freq = CPU_AT_1_2GHz;
+u32 arm_max_freq = CPU_AT_1GHz;
 bool mem_clk_on_in_wait;
 int chip_rev;
 
