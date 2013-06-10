@@ -1610,12 +1610,14 @@ static void __init imx6q_add_device_buttons(void)
 	 *	3 Act as power key to let device suspend/resume
 	 *	4 Act screenshort(hold power key and volume down key for 2s)
 	 */
+#if 0
 	if (mx6q_revision() >= IMX_CHIP_REVISION_1_2 ||
 			mx6dl_revision() >= IMX_CHIP_REVISION_1_1)
 		platform_device_add_data(&sabresd_button_device,
 				&new_sabresd_button_data,
 				sizeof(new_sabresd_button_data));
 	else
+#endif
 		platform_device_add_data(&sabresd_button_device,
 				&sabresd_button_data,
 				sizeof(sabresd_button_data));
