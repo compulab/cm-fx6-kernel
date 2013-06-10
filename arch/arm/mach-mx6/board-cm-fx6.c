@@ -79,6 +79,7 @@
 #define SB_FX6_HIMAX_PENDOWN		IMX_GPIO_NR(1, 4)
 #define SB_FX6m_DVI_HPD			IMX_GPIO_NR(1, 4)
 #define CM_FX6_iSSD_SATA_PWREN		IMX_GPIO_NR(1, 28)
+#define SB_FX6_GPIO_PWRBTN		IMX_GPIO_NR(1, 29)
 #define CM_FX6_iSSD_SATA_VDDC_CTRL	IMX_GPIO_NR(1, 30)
 #define CM_FX6_ADS7846_PENDOWN		IMX_GPIO_NR(2, 15)
 #define CM_FX6_iSSD_SATA_LDO_EN		IMX_GPIO_NR(2, 16)
@@ -98,6 +99,7 @@
 #define SB_FX6_SD3_WP			IMX_GPIO_NR(7, 0)
 #define SB_FX6_SD3_CD			IMX_GPIO_NR(7, 1)
 #define CM_FX6_USBHUB_nRST		IMX_GPIO_NR(7, 8)
+#define SB_FX6_GPIO_HOMEBTN		IMX_GPIO_NR(7, 13)
 
 #define SB_FX6_PCA9555_BASE_ADDR	IMX_GPIO_NR(8, 0)
 
@@ -1310,6 +1312,48 @@ static inline void cm_fx6_init_led(void) {}
 #endif
 
 
+#if defined(CONFIG_KEYBOARD_GPIO)
+#define GPIO_BUTTON(gpio_num, ev_code, act_low, descr, wake, debounce)	\
+{									\
+	.gpio			= gpio_num,				\
+	.type			= EV_KEY,				\
+	.code			= ev_code,				\
+	.active_low		= act_low,				\
+	.desc			= "gpio " descr,			\
+	.wakeup			= wake,					\
+	.debounce_interval	= debounce,				\
+}
+
+static struct gpio_keys_button cm_fx6_buttons[] = {
+	GPIO_BUTTON(SB_FX6_GPIO_PWRBTN, KEY_POWER, 1, "power button", 1, 1),
+	GPIO_BUTTON(SB_FX6_GPIO_HOMEBTN, KEY_HOMEPAGE, 1, "home button", 0, 1),
+};
+
+static struct gpio_keys_platform_data cm_fx6_button_data = {
+	.buttons		= cm_fx6_buttons,
+	.nbuttons		= ARRAY_SIZE(cm_fx6_buttons),
+};
+
+static struct platform_device cm_fx6_button_device = {
+	.name			= "gpio-keys",
+	.id			= -1,
+	.num_resources	 	= 0,
+};
+
+static void __init cm_fx6_init_gpio_buttons(void)
+{
+	platform_device_add_data(&cm_fx6_button_device,
+				 &cm_fx6_button_data,
+				 sizeof(cm_fx6_button_data));
+	platform_device_register(&cm_fx6_button_device);
+}
+
+#else
+
+static void __init cm_fx6_init_gpio_buttons(void) {}
+#endif
+
+
 static void mx6_snvs_poweroff(void)
 {
 	void __iomem *mx6_snvs_base =  MX6_IO_ADDRESS(MX6Q_SNVS_BASE_ADDR);
@@ -1394,6 +1438,7 @@ static void __init cm_fx6_init(void)
 	cm_fx6_init_i2c();
 	cm_fx6_init_led();
 	cm_fx6_init_spi();
+	cm_fx6_init_gpio_buttons();
 
 	imx6q_add_anatop_thermal_imx(1, &cm_fx6_anatop_thermal_data);
 
