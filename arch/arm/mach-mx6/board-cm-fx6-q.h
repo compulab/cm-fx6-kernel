@@ -140,6 +140,8 @@ static iomux_v3_cfg_t cm_fx6_q_pads[] = {
 
 	/* USB hub reset */
 	MX6Q_PAD_SD3_RST__GPIO_7_8,
+	/* USBH1 power */
+	MX6Q_PAD_GPIO_0__GPIO_1_0,
 
 	/* iSSD SATA flash storage -- MX6Q only */
 	MX6Q_PAD_ENET_TX_EN__GPIO_1_28,	/* PWREN */

@@ -78,6 +78,7 @@
 #include "board-cm-fx6-dl.h"
 
 /* GPIO PIN, sort by PORT/BIT */
+#define CM_FX6_USBH1_PWR		IMX_GPIO_NR(1, 0)
 #define CM_FX6_LDB_BACKLIGHT		IMX_GPIO_NR(1, 9)
 #define CM_FX6_iSSD_SATA_PWREN		IMX_GPIO_NR(1, 28)
 #define CM_FX6_iSSD_SATA_VDDC_CTRL	IMX_GPIO_NR(1, 30)
@@ -522,6 +523,15 @@ static void __init cm_fx6_init_usb(void)
 	gpio_direction_output(CM_FX6_USBHUB_nRST, 0);
 	udelay(1);
 	gpio_set_value(CM_FX6_USBHUB_nRST, 1);
+
+
+	/* if no USB hub  -  power USB1 VBUS */
+	ret = gpio_request(CM_FX6_USBH1_PWR, "usb1 cpen");
+	if (ret) {
+		pr_err("failed to get USBH1_PWR GPIO: %d \n", ret);
+		return;
+	}
+	gpio_direction_output(CM_FX6_USBH1_PWR, 1);
 
 
 	imx_otg_base = MX6_IO_ADDRESS(MX6Q_USB_OTG_BASE_ADDR);
