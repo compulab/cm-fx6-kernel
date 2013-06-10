@@ -134,6 +134,10 @@ static iomux_v3_cfg_t cm_fx6_dl_pads[] = {
 	/* CAN1 */
 	MX6DL_PAD_KEY_COL2__CAN1_TXCAN,
 	MX6DL_PAD_KEY_ROW2__CAN1_RXCAN,
+
+	/* GPIO key */
+	MX6DL_PAD_ENET_TXD1__GPIO_1_29,
+	MX6DL_PAD_GPIO_18__GPIO_7_13,
 };
 
 static iomux_v3_cfg_t cm_fx6_dl_spdif_pads[] = {
