@@ -81,6 +81,7 @@
 #define CM_FX6_USBH1_PWR		IMX_GPIO_NR(1, 0)
 #define CM_FX6_LDB_BACKLIGHT		IMX_GPIO_NR(1, 9)
 #define CM_FX6_iSSD_SATA_PWREN		IMX_GPIO_NR(1, 28)
+#define SB_FX6_GPIO_PWRBTN		IMX_GPIO_NR(1, 29)
 #define CM_FX6_iSSD_SATA_VDDC_CTRL	IMX_GPIO_NR(1, 30)
 #define CM_FX6_iSSD_SATA_LDO_EN		IMX_GPIO_NR(2, 16)
 #define CM_FX6_ECSPI1_CS0		IMX_GPIO_NR(2, 30)
@@ -1014,6 +1015,45 @@ static inline void cm_fx6_init_led(void) {}
 #endif
 
 
+#if defined(CONFIG_KEYBOARD_GPIO)
+#define GPIO_BUTTON(gpio_num, ev_code, act_low, descr, wake, debounce)	\
+{									\
+	.gpio			= gpio_num,				\
+	.type			= EV_KEY,				\
+	.code			= ev_code,				\
+	.active_low		= act_low,				\
+	.desc			= "gpio " descr,				\
+	.wakeup			= wake,					\
+	.debounce_interval	= debounce,				\
+}
+
+static struct gpio_keys_button cm_fx6_buttons[] = {
+	GPIO_BUTTON(SB_FX6_GPIO_PWRBTN, KEY_POWER, 1, "power-button", 1, 1),
+};
+
+static struct gpio_keys_platform_data cm_fx6_button_data = {
+	.buttons		= cm_fx6_buttons,
+	.nbuttons		= ARRAY_SIZE(cm_fx6_buttons),
+};
+
+static struct platform_device cm_fx6_button_device = {
+	.name			= "gpio-keys",
+	.id			= -1,
+	.num_resources	 	= 0,
+};
+
+static void __init imx6q_add_device_buttons(void)
+{
+	platform_device_add_data(&cm_fx6_button_device,
+				 &cm_fx6_button_data,
+				 sizeof(cm_fx6_button_data));
+	platform_device_register(&cm_fx6_button_device);
+}
+#else
+static void __init imx6q_add_device_buttons(void) {}
+#endif
+
+
 static void cm_fx6_init_display(void)
 {
 	int i;
@@ -1130,6 +1170,7 @@ static void __init cm_fx6_init(void)
 
 	cm_fx6_init_i2c();
 	cm_fx6_init_led();
+	imx6q_add_device_buttons();
 
 	/* SPI */
 	imx6q_add_ecspi(0, &cm_fx6_spi_data);

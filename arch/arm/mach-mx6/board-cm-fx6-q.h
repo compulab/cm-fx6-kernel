@@ -143,6 +143,9 @@ static iomux_v3_cfg_t cm_fx6_q_pads[] = {
 	/* USBH1 power */
 	MX6Q_PAD_GPIO_0__GPIO_1_0,
 
+	/* GPIO key */
+	MX6Q_PAD_ENET_TXD1__GPIO_1_29,
+
 	/* iSSD SATA flash storage -- MX6Q only */
 	MX6Q_PAD_ENET_TX_EN__GPIO_1_28,	/* PWREN */
 	MX6Q_PAD_EIM_A22__GPIO_2_16,	/* LDO_EN */

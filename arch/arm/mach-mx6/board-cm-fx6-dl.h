@@ -139,6 +139,9 @@ static iomux_v3_cfg_t cm_fx6_dl_pads[] = {
 	MX6DL_PAD_SD3_RST__GPIO_7_8,
 	/* USBH1 power */
 	MX6DL_PAD_GPIO_0__GPIO_1_0,
+
+	/* GPIO key */
+	MX6DL_PAD_ENET_TXD1__GPIO_1_29,
 };
 
 static iomux_v3_cfg_t cm_fx6_dl_spdif_pads[] = {
