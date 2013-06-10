@@ -37,6 +37,7 @@ static int suspend_counter_notifier(struct notifier_block *nb,
 		suspend_time = ktime_get_real();
 		printk(KERN_INFO "suspend: start %d suspend...\n",
 		       suspend_counter);
+		break;
 	case PM_POST_SUSPEND:
 		tmp_time = ktime_sub(ktime_get_real(), suspend_time);
 		tv = ktime_to_timespec(tmp_time);
@@ -45,7 +46,9 @@ static int suspend_counter_notifier(struct notifier_block *nb,
 		       suspend_counter,
 		       (unsigned long) tv.tv_sec,
 		       (unsigned long) tv.tv_nsec);
+		break;
 	default:
+		printk(KERN_ERR "suspend: unexpected event: %04lx \n", event);
 		break;
 	}
 	return 0;
