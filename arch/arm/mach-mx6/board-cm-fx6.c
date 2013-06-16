@@ -90,6 +90,8 @@
 #define CM_FX6_iSSD_SATA_nSTDBY1	IMX_GPIO_NR(3, 20)
 #define CM_FX6_USB_OTG_PWR		IMX_GPIO_NR(3, 22)
 #define CM_FX6_iSSD_SATA_PHY_SLP	IMX_GPIO_NR(3, 23)
+#define CM_FX6_ECSPI2_CS2		IMX_GPIO_NR(3, 24)
+#define CM_FX6_ECSPI2_CS3		IMX_GPIO_NR(3, 25)
 #define CM_FX6_iSSD_SATA_STBY_REQ	IMX_GPIO_NR(3, 29)
 #define CM_FX6_iSSD_SATA_nSTDBY2	IMX_GPIO_NR(5, 2)
 #define CM_FX6_iSSD_SATA_nRSTDLY	IMX_GPIO_NR(6, 6)
@@ -304,14 +306,24 @@ static struct fec_platform_data fec_data __initdata = {
 	.phy			= PHY_INTERFACE_MODE_RGMII,
 };
 
-static int cm_fx6_spi_cs[] = {
+static int cm_fx6_spi0_cs[] = {
 	CM_FX6_ECSPI1_CS0,
 	CM_FX6_ECSPI1_CS1,
 };
 
-static const struct spi_imx_master cm_fx6_spi_data __initconst = {
-	.chipselect     = cm_fx6_spi_cs,
-	.num_chipselect = ARRAY_SIZE(cm_fx6_spi_cs),
+static int cm_fx6_spi1_cs[] = {
+	CM_FX6_ECSPI2_CS2,
+	CM_FX6_ECSPI2_CS3,
+};
+
+static const struct spi_imx_master cm_fx6_spi0_data __initconst = {
+	.chipselect     = cm_fx6_spi0_cs,
+	.num_chipselect = ARRAY_SIZE(cm_fx6_spi0_cs),
+};
+
+static const struct spi_imx_master cm_fx6_spi1_data __initconst = {
+	.chipselect     = cm_fx6_spi1_cs,
+	.num_chipselect = ARRAY_SIZE(cm_fx6_spi1_cs),
 };
 
 #if defined(CONFIG_MTD_M25P80) || defined(CONFIG_MTD_M25P80_MODULE)
@@ -355,10 +367,16 @@ static struct spi_board_info cm_fx6_spi0_board_info[] = {
 #endif
 };
 
+static struct spi_board_info cm_fx6_spi1_board_info[] = {
+
+};
+
 static void spi_device_init(void)
 {
 	spi_register_board_info(cm_fx6_spi0_board_info,
 				ARRAY_SIZE(cm_fx6_spi0_board_info));
+	spi_register_board_info(cm_fx6_spi1_board_info,
+				ARRAY_SIZE(cm_fx6_spi1_board_info));
 }
 
 #if defined(CONFIG_I2C_IMX)
@@ -1173,7 +1191,8 @@ static void __init cm_fx6_init(void)
 	imx6q_add_device_buttons();
 
 	/* SPI */
-	imx6q_add_ecspi(0, &cm_fx6_spi_data);
+	imx6q_add_ecspi(0, &cm_fx6_spi0_data);
+	imx6q_add_ecspi(1, &cm_fx6_spi1_data);
 	spi_device_init();
 
 	imx6q_add_mxc_hdmi(&hdmi_data);
