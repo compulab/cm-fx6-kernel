@@ -52,6 +52,7 @@
 #include <linux/mxc_asrc.h>
 #include <linux/mfd/mxc-hdmi-core.h>
 #include <linux/ds2782_battery.h>
+#include <linux/spi/scf0403.h>
 
 #include <mach/common.h>
 #include <mach/hardware.h>
@@ -105,6 +106,7 @@
 
 #define SB_FX6_DVIT_nPD			SB_FX6_IO_EXP_GPIO(2)
 #define SB_FX6_DVIT_MSEN		SB_FX6_IO_EXP_GPIO(3)
+#define SB_FX6_LCD_RST			SB_FX6_IO_EXP_GPIO(11)
 
 #define CM_FX6_PCIE_PWR_EN		SB_FX6_IO_EXP_GPIO(14)
 #define CM_FX6_PCIE_RESET		SB_FX6_IO_EXP_GPIO(14)
@@ -353,6 +355,10 @@ static struct flash_platform_data cm_fx6_spi_flash_data = {
 };
 #endif
 
+static struct scf0403_pdata scf0403_config = {
+	.reset_gpio	= SB_FX6_LCD_RST,
+};
+
 static struct spi_board_info cm_fx6_spi0_board_info[] = {
 #if defined(CONFIG_MTD_M25P80) || defined(CONFIG_MTD_M25P80_MODULE)
 	{
@@ -367,7 +373,15 @@ static struct spi_board_info cm_fx6_spi0_board_info[] = {
 };
 
 static struct spi_board_info cm_fx6_spi1_board_info[] = {
-
+#if defined(CONFIG_LCD_SCF0403) || defined(CONFIG_LCD_SCF0403_MODULE)
+	{
+		.modalias               = "scf0403",
+		.max_speed_hz           = 1000000,
+		.bus_num                = 1,
+		.chip_select            = 1,
+		.platform_data          = &scf0403_config,
+	},
+#endif
 };
 
 static void spi_device_init(void)
@@ -739,11 +753,10 @@ static struct ipuv3_fb_platform_data sabr_fb_data[] = {
 	.int_clk		= false,
 	}, {
 	.disp_dev		= "lcd",
-	.interface_pix_fmt	= IPU_PIX_FMT_RGB565,
-	.mode_str		= "CLAA-WVGA",
-	.default_bpp		= 16,
+	.interface_pix_fmt	= IPU_PIX_FMT_RGB666,
+	.mode_str		= "SCF04-WVGA",
 	.int_clk		= false,
-	}
+	},
 };
 
 static void hdmi_init(int ipu_id, int disp_id)
@@ -785,7 +798,7 @@ static struct fsl_mxc_hdmi_core_platform_data hdmi_core_data = {
 static struct fsl_mxc_lcd_platform_data lcdif_data = {
 	.ipu_id		= 0,
 	.disp_id	= 0,
-	.default_ifmt	= IPU_PIX_FMT_RGB565,
+	.default_ifmt	= IPU_PIX_FMT_RGB666,
 };
 
 static struct fsl_mxc_ldb_platform_data ldb_data = {
@@ -1051,7 +1064,7 @@ static inline void cm_fx6_init_led(void) {}
 	.type			= EV_KEY,				\
 	.code			= ev_code,				\
 	.active_low		= act_low,				\
-	.desc			= "gpio " descr,				\
+	.desc			= "gpio " descr,			\
 	.wakeup			= wake,					\
 	.debounce_interval	= debounce,				\
 }
@@ -1086,6 +1099,7 @@ static void __init imx6q_add_device_buttons(void) {}
 static void cm_fx6_init_display(void)
 {
 	int i;
+	int count;
 
 	/* 
 	 * initialize DVI transmitter on the base board (SiI164C)
@@ -1099,18 +1113,19 @@ static void cm_fx6_init_display(void)
 
 
 	imx6q_add_mxc_hdmi_core(&hdmi_core_data);
+	imx6q_add_mxc_hdmi(&hdmi_data);
+
 
 	imx6q_add_ipuv3(0, &ipu_data[0]);
 	if (cpu_is_mx6q())
 		imx6q_add_ipuv3(1, &ipu_data[1]);
 
-	if (cpu_is_mx6dl()) {
-		for (i = 0; i < ARRAY_SIZE(sabr_fb_data) / 2; i++)
-			imx6q_add_ipuv3fb(i, &sabr_fb_data[i]);
-	} else {
-		for (i = 0; i < ARRAY_SIZE(sabr_fb_data); i++)
-			imx6q_add_ipuv3fb(i, &sabr_fb_data[i]);
-	}
+	count = ARRAY_SIZE(sabr_fb_data);
+	if (cpu_is_mx6dl())
+		count /= 2;
+
+	for (i = 0; i < count; ++i)
+		imx6q_add_ipuv3fb(i, &sabr_fb_data[i]);
 
 	imx6q_add_vdoa();
 	imx6q_add_lcdif(&lcdif_data);
@@ -1205,8 +1220,6 @@ static void __init cm_fx6_init(void)
 	imx6q_add_ecspi(0, &cm_fx6_spi0_data);
 	imx6q_add_ecspi(1, &cm_fx6_spi1_data);
 	spi_device_init();
-
-	imx6q_add_mxc_hdmi(&hdmi_data);
 
 	imx6q_add_anatop_thermal_imx(1, &cm_fx6_anatop_thermal_data);
 
