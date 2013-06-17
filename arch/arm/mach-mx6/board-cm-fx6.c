@@ -46,6 +46,7 @@
 #include <linux/mxc_asrc.h>
 #include <linux/mfd/mxc-hdmi-core.h>
 #include <linux/gpio-i2cmux.h>
+#include <linux/spi/scf0403.h>
 
 #include <mach/common.h>
 #include <mach/hardware.h>
@@ -103,6 +104,7 @@
 #define CM_FX6_PCIE_PWR_EN		-1
 #define CM_FX6_PCIE_RESET		-1
 #define CM_FX6_CAN2_STBY		-1
+#define SB_FX6_LCD_RST			SB_FX6_IO_EXP_GPIO(11)
 
 #define BMCR_PDOWN			0x0800 /* PHY Powerdown */
 #define EEPROM_1ST_MAC_OFF		4
@@ -336,6 +338,29 @@ static struct flash_platform_data cm_fx6_spi_flash_data = {
 };
 #endif
 
+#if defined(CONFIG_LCD_SCF0403) || defined(CONFIG_LCD_SCF0403_MODULE)
+static struct scf0403_pdata scf0403_config = {
+	.reset_gpio	= SB_FX6_LCD_RST,
+};
+
+static struct spi_board_info scf0403_board_info = {
+	.modalias               = "scf0403",
+	.max_speed_hz           = 1000000,
+	.bus_num                = 1,
+	.chip_select            = 1,
+	.platform_data          = &scf0403_config,
+};
+
+static void scf0403_lcd_register(void)
+{
+	cm_fx6_spi_device_register(1, &scf0403_board_info, "DataImage LCD");
+}
+
+#else
+
+static void scf0403_lcd_register(void) {}
+#endif
+
 static struct spi_board_info cm_fx6_spi0_board_info[] = {
 #if defined(CONFIG_MTD_M25P80) || defined(CONFIG_MTD_M25P80_MODULE)
 	{
@@ -395,6 +420,7 @@ static void __init sb_fx6_init(void)
 	cm_fx6_sd3_data.always_present	= 0;
 
 	sb_fx6_gpio_expander_register();
+	scf0403_lcd_register();
 }
 
 static void __init sb_fx6m_init(void)
@@ -885,7 +911,7 @@ static struct fsl_mxc_hdmi_core_platform_data hdmi_core_data = {
 static struct fsl_mxc_lcd_platform_data lcdif_data = {
 	.ipu_id		= 0,
 	.disp_id	= 0,
-	.default_ifmt	= IPU_PIX_FMT_RGB565,
+	.default_ifmt	= IPU_PIX_FMT_RGB24,
 };
 
 static struct fsl_mxc_ldb_platform_data ldb_data = {
