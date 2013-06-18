@@ -139,6 +139,9 @@ static iomux_v3_cfg_t cm_fx6_q_pads[] = {
 	/* green LED */
 	MX6Q_PAD_EIM_EB3__GPIO_2_31,
 
+	/* HX8520_C PENDOWN */
+	MX6Q_PAD_GPIO_4__GPIO_1_4,
+
 	/* USB hub reset */
 	MX6Q_PAD_SD3_RST__GPIO_7_8,
 	/* USBH1 power */

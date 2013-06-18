@@ -80,6 +80,7 @@
 
 /* GPIO PIN, sort by PORT/BIT */
 #define CM_FX6_USBH1_PWR		IMX_GPIO_NR(1, 0)
+#define SB_FX6_HX8520_PENDOWN		IMX_GPIO_NR(1, 4)
 #define CM_FX6_iSSD_SATA_PWREN		IMX_GPIO_NR(1, 28)
 #define SB_FX6_GPIO_PWRBTN		IMX_GPIO_NR(1, 29)
 #define CM_FX6_iSSD_SATA_VDDC_CTRL	IMX_GPIO_NR(1, 30)
@@ -499,6 +500,12 @@ static struct i2c_board_info mxc_i2c0_board_info[] __initdata = {
 		.platform_data = &ds2786_volt_gauge_data,
 	},
 #endif
+#ifdef CONFIG_TOUCHSCREEN_HX8520_C
+	{
+		I2C_BOARD_INFO("hx8520-c", 0x4a),
+		.irq = gpio_to_irq(SB_FX6_HX8520_PENDOWN),
+	},
+#endif
 };
 
 static struct i2c_board_info mxc_i2c1_board_info[] __initdata = {
@@ -517,8 +524,27 @@ static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
 #endif
 };
 
+#ifdef CONFIG_TOUCHSCREEN_HX8520_C
+static void __init touchscreen_hx8520_c_init(void)
+{
+	int err;
+
+	err = gpio_request_one(SB_FX6_HX8520_PENDOWN, GPIOF_IN, "hx8520_pen");
+	if (err) {
+		pr_err("could not acquire gpio %u (hx8520_pen): %d \n", SB_FX6_HX8520_PENDOWN, err);
+		return;
+	}
+}
+
+#else
+
+static inline void touchscreen_hx8520_c_init(void) {}
+#endif	// CONFIG_TOUCHSCREEN_HX8520_C
+
 static void __init cm_fx6_init_i2c(void)
 {
+	touchscreen_hx8520_c_init();
+
 	imx6q_add_imx_i2c(0, &cm_fx6_i2c0_data);
 	imx6q_add_imx_i2c(1, &cm_fx6_i2c1_data);
 	imx6q_add_imx_i2c(2, &cm_fx6_i2c2_data);
