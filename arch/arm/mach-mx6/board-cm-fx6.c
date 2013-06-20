@@ -113,11 +113,9 @@
 #define EEPROM_1ST_MAC_OFF		4
 #define EEPROM_BOARD_NAME_OFF           128
 #define EEPROM_BOARD_NAME_LEN           16
-#define WM8731_MCLK_FREQ		(24000000 / 2)
 
 #define MX6_SNVS_LPCR_REG		0x38
 
-static struct clk *clko;
 static struct clk *sata_clk;
 static int spdif_en;
 static unsigned int board_rev;
@@ -1186,26 +1184,75 @@ static struct imx_ssi_platform_data cm_fx6_ssi_pdata = {
 };
 
 static struct mxc_audio_platform_data cm_fx6_audio_data;
+static struct {
+	struct clk *pll;
+	struct clk *clock_root;
+	long current_rate;
+
+} cm_fx6_audio_clocking_data;
 
 static int wm8731_init(void)
 {
-	long rate;
+	struct clk *new_parent;
+	struct clk *ssi_clk;
 
-	rate = clk_round_rate(clko, WM8731_MCLK_FREQ);
-	clk_set_rate(clko, rate);
-	pr_info("%s: CLKO rate %d -> %ld \n", __FUNCTION__, WM8731_MCLK_FREQ, rate);
+	new_parent = clk_get(NULL, "pll4");
+	if (IS_ERR(new_parent)) {
+		pr_err("Could not get \"pll4\" clock \n");
+		return PTR_ERR(new_parent);
+	}
 
-	cm_fx6_audio_data.sysclk = rate;
+	ssi_clk = clk_get_sys("imx-ssi.1", NULL);
+	if (IS_ERR(ssi_clk)) {
+		pr_err("Could not get \"imx-ssi.1\" clock \n");
+		return PTR_ERR(ssi_clk);
+	}
+
+	clk_set_parent(ssi_clk, new_parent);
+
+	cm_fx6_audio_clocking_data.pll = new_parent;
+	cm_fx6_audio_clocking_data.clock_root = ssi_clk;
+	cm_fx6_audio_clocking_data.current_rate = 0;
 
 	return 0;
 }
 
 static int wm8731_clock_enable(int enable)
 {
-	if ( enable )
-		return clk_enable(clko);
+	long pll_rate;
+	long rate_req;
+	long rate_avail;
 
-	clk_disable(clko);
+	if ( !enable )
+		return 0;
+
+	if (cm_fx6_audio_data.sysclk == cm_fx6_audio_clocking_data.current_rate)
+		return 0;
+
+	switch (cm_fx6_audio_data.sysclk)
+	{
+	case 11289600:
+		pll_rate = 632217600;
+		break;
+
+	case 12288000:
+		pll_rate = 688128000;
+		break;
+
+	default:
+		return -EINVAL;
+	}
+
+	rate_req = pll_rate;
+	rate_avail = clk_round_rate(cm_fx6_audio_clocking_data.pll, rate_req);
+	clk_set_rate(cm_fx6_audio_clocking_data.pll, rate_avail);
+
+	rate_req = cm_fx6_audio_data.sysclk;
+	rate_avail = clk_round_rate(cm_fx6_audio_clocking_data.clock_root, rate_req);
+	clk_set_rate(cm_fx6_audio_clocking_data.clock_root, rate_avail);
+
+	pr_info("%s: \"imx-ssi.1\" rate = %ld (= %ld) \n", __FUNCTION__, rate_avail, rate_req);
+	cm_fx6_audio_clocking_data.current_rate = cm_fx6_audio_data.sysclk;
 	return 0;
 }
 
@@ -1220,34 +1267,15 @@ static struct mxc_audio_platform_data cm_fx6_audio_data = {
 	.ext_port = 4,	/* AUDMUX: port[2] -> port[4] */
 	.hp_gpio = -1,
 	.mic_gpio = -1,
+	.sysclk = 0,
 	.init = wm8731_init,
 	.clock_enable = wm8731_clock_enable,
 };
 
 static int __init cm_fx6_init_audio(void)
 {
-	long rate;
-	struct clk *clko2;
 	iomux_v3_cfg_t *audmux_pads = NULL;
 	int audmux_pads_cnt = 0;
-
-	clko2 = clk_get(NULL, "clko2_clk");
-	if (IS_ERR(clko2)) {
-		pr_err("Could not get CLKO2 clock \n");
-		return PTR_ERR(clko);
-	}
-	rate = clk_round_rate(clko2, WM8731_MCLK_FREQ);
-	clk_set_rate(clko2, rate);
-
-	clko = clk_get(NULL, "clko_clk");
-	if (IS_ERR(clko)) {
-		pr_err("Could not get CLKO clock \n");
-		return PTR_ERR(clko);
-	}
-
-	clk_set_parent(clko, clko2);
-
-
 
 	if (cpu_is_mx6q()) {
 		audmux_pads = cm_fx6_q_audmux_pads;
