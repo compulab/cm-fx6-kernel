@@ -452,6 +452,9 @@ static void __init sb_fx6_init(void)
 	scf0403_lcd_register();
 	sb_fx6_touchscreen_himax_register();
 	dvi_hpd_gpio = SB_FX6_DVI_HPD;
+
+	/* i.mx6 power key */
+	imx6q_add_imx_snvs_pwrkey();
 }
 
 static void __init sb_fx6m_init(void)
@@ -1128,11 +1131,13 @@ static struct ion_platform_data imx_ion_data = {
 static void cm_fx6_suspend_enter(void)
 {
 	/* suspend preparation */
+	pr_info("----- suspend ----- \n");
 }
 
 static void cm_fx6_suspend_exit(void)
 {
-	/* resume restore */
+	/* resume resore */
+	pr_info("----- resume ------ \n");
 }
 static const struct pm_platform_data cm_fx6_pm_data __initconst = {
 	.name		= "imx_pm",
