@@ -917,11 +917,13 @@ static const struct flexcan_platform_data cm_fx6_flexcan_pdata[] __initconst = {
 static void arm2_suspend_enter(void)
 {
 	/* suspend preparation */
+	pr_info("----- suspend ----- \n");
 }
 
 static void arm2_suspend_exit(void)
 {
-	/* resmue resore */
+	/* resume resore */
+	pr_info("----- resume ------ \n");
 }
 static const struct pm_platform_data cm_fx6_pm_data __initconst = {
 	.name		= "imx_pm",
@@ -1261,6 +1263,7 @@ static void __init cm_fx6_init(void)
 	cm_fx6_init_display();
 
 	imx6q_add_imx_snvs_rtc();
+	imx6q_add_imx_snvs_pwrkey();
 
 	imx6q_add_imx_caam();
 
