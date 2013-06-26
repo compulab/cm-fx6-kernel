@@ -241,6 +241,8 @@ struct _coeff_div {
 
 /* codec mclk clock divider coefficients */
 static const struct _coeff_div coeff_div[] = {
+	{       0,     0,   0,   0,   0,   0},
+
 	/* 48k */
 	{12288000, 48000, 256, 0x0, 0x0, 0x0},
 	{18432000, 48000, 384, 0x0, 0x1, 0x0},
@@ -282,6 +284,9 @@ static inline int get_coeff(int mclk, int rate)
 		if (coeff_div[i].rate == rate && coeff_div[i].mclk == mclk)
 			return i;
 	}
+	
+	pr_info("wm8731: inappropriate clock rates: mclk = %d  sampling = %d \n",
+			mclk, rate);
 	return 0;
 }
 
@@ -309,6 +314,9 @@ static int wm8731_hw_params(struct snd_pcm_substream *substream,
 		break;
 	case SNDRV_PCM_FORMAT_S24_LE:
 		iface |= 0x0008;
+		break;
+	default:
+		iface |= 0x000C;
 		break;
 	}
 
@@ -470,7 +478,9 @@ static int wm8731_set_bias_level(struct snd_soc_codec *codec,
 	return 0;
 }
 
-#define WM8731_RATES SNDRV_PCM_RATE_8000_96000
+#define WM8731_RATES	(SNDRV_PCM_RATE_8000 | SNDRV_PCM_RATE_32000 | \
+			SNDRV_PCM_RATE_44100 | SNDRV_PCM_RATE_48000 | \
+			SNDRV_PCM_RATE_88200 | SNDRV_PCM_RATE_96000)
 
 #define WM8731_FORMATS (SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S20_3LE |\
 	SNDRV_PCM_FMTBIT_S24_LE)

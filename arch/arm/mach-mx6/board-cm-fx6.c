@@ -548,6 +548,12 @@ static struct i2c_board_info mxc_i2c2_board_info[] __initdata = {
 		.platform_data = &cm_fx6_id_eeprom_data,
 	},
 #endif
+#ifdef CONFIG_SND_SOC_IMX_WM8731
+	{
+		/* wm8731 audio codec */
+		I2C_BOARD_INFO("wm8731", 0x1a),
+	}
+#endif
 };
 
 #ifdef CONFIG_TOUCHSCREEN_HX8520_C
@@ -961,9 +967,112 @@ static struct imx_ssi_platform_data cm_fx6_ssi_pdata = {
 	.flags = IMX_SSI_DMA | IMX_SSI_SYN,
 };
 
+static struct mxc_audio_platform_data cm_fx6_audio_data;
+static struct {
+	struct clk *pll;
+	struct clk *clock_root;
+	long current_rate;
+
+} cm_fx6_audio_clocking_data;
+
+static int wm8731_init(void)
+{
+	struct clk *new_parent;
+	struct clk *ssi_clk;
+
+	new_parent = clk_get(NULL, "pll4");
+	if (IS_ERR(new_parent)) {
+		pr_err("Could not get \"pll4\" clock \n");
+		return PTR_ERR(new_parent);
+	}
+
+	ssi_clk = clk_get_sys("imx-ssi.1", NULL);
+	if (IS_ERR(ssi_clk)) {
+		pr_err("Could not get \"imx-ssi.1\" clock \n");
+		return PTR_ERR(ssi_clk);
+	}
+
+	clk_set_parent(ssi_clk, new_parent);
+
+	cm_fx6_audio_clocking_data.pll = new_parent;
+	cm_fx6_audio_clocking_data.clock_root = ssi_clk;
+	cm_fx6_audio_clocking_data.current_rate = 0;
+
+	return 0;
+}
+
+static int wm8731_clock_enable(int enable)
+{
+	long pll_rate;
+	long rate_req;
+	long rate_avail;
+
+	if ( !enable )
+		return 0;
+
+	if (cm_fx6_audio_data.sysclk == cm_fx6_audio_clocking_data.current_rate)
+		return 0;
+
+	switch (cm_fx6_audio_data.sysclk)
+	{
+	case 11289600:
+		pll_rate = 632217600;
+		break;
+
+	case 12288000:
+		pll_rate = 688128000;
+		break;
+
+	default:
+		return -EINVAL;
+	}
+
+	rate_req = pll_rate;
+	rate_avail = clk_round_rate(cm_fx6_audio_clocking_data.pll, rate_req);
+	clk_set_rate(cm_fx6_audio_clocking_data.pll, rate_avail);
+
+	rate_req = cm_fx6_audio_data.sysclk;
+	rate_avail = clk_round_rate(cm_fx6_audio_clocking_data.clock_root, rate_req);
+	clk_set_rate(cm_fx6_audio_clocking_data.clock_root, rate_avail);
+
+	pr_info("%s: \"imx-ssi.1\" rate = %ld (= %ld) \n", __FUNCTION__, rate_avail, rate_req);
+	cm_fx6_audio_clocking_data.current_rate = cm_fx6_audio_data.sysclk;
+	return 0;
+}
+
+static struct platform_device cm_fx6_audio_device = {
+	.name	= "imx-wm8731",
+	.id	= -1,
+};
+
+static struct mxc_audio_platform_data cm_fx6_audio_data = {
+	.ssi_num = 1,
+	.src_port = 2,
+	.ext_port = 4,	/* AUDMUX: port[2] -> port[4] */
+	.hp_gpio = -1,
+	.mic_gpio = -1,
+	.sysclk = 0,
+	.init = wm8731_init,
+	.clock_enable = wm8731_clock_enable,
+};
+
 static int __init cm_fx6_init_audio(void)
 {
-	/* FIXME */
+	iomux_v3_cfg_t *audmux_pads;
+	int audmux_pads_cnt;
+
+	if (cpu_is_mx6q()) {
+		audmux_pads = cm_fx6_q_audmux_pads;
+		audmux_pads_cnt = ARRAY_SIZE(cm_fx6_q_audmux_pads);
+	}
+	else if (cpu_is_mx6dl()) {
+		audmux_pads = cm_fx6_dl_audmux_pads;
+		audmux_pads_cnt = ARRAY_SIZE(cm_fx6_dl_audmux_pads);
+	}
+	mxc_iomux_v3_setup_multiple_pads(audmux_pads, audmux_pads_cnt);
+
+	mxc_register_device(&cm_fx6_audio_device, &cm_fx6_audio_data);
+	imx6q_add_imx_ssi(1, &cm_fx6_ssi_pdata);
 
 	return 0;
 }
