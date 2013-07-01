@@ -416,8 +416,10 @@ SYSCALL_DEFINE4(reboot, int, magic1, int, magic2, unsigned int, cmd,
 	/* Instead of trying to make the power_off code look like
 	 * halt when pm_power_off is not set do it the easy way.
 	 */
-	if ((cmd == LINUX_REBOOT_CMD_POWER_OFF) && !pm_power_off)
+	if ((cmd == LINUX_REBOOT_CMD_POWER_OFF) && !pm_power_off) {
+		printk(KERN_EMERG "machine-specific power off function is not set: POWER_OFF -> HALT \n");
 		cmd = LINUX_REBOOT_CMD_HALT;
+	}
 
 	mutex_lock(&reboot_mutex);
 	switch (cmd) {

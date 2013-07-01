@@ -119,6 +119,8 @@
 #define DS2786_RSNS			18	/* [Ohm] - sense resistor value */
 #define EEPROM_1ST_MAC_OFF		4
 
+#define MX6_SNVS_LPCR_REG		0x38
+
 static struct clk *sata_clk;
 static int spdif_en;
 static int gpmi_en;
@@ -1297,6 +1299,19 @@ static void cm_fx6_init_display(void)
 }
 
 
+static void mx6_snvs_poweroff(void)
+{
+	void __iomem *mx6_snvs_base =  MX6_IO_ADDRESS(MX6Q_SNVS_BASE_ADDR);
+	u32 value;
+
+	pr_info("Turn off system power \n");
+	value = readl(mx6_snvs_base + MX6_SNVS_LPCR_REG);
+	/* set TOP and DP_EN bits */
+	value |= 0x0060;
+	writel(value, (mx6_snvs_base + MX6_SNVS_LPCR_REG));
+}
+
+
 /*!
  * Board specific initialization.
  */
@@ -1373,6 +1388,7 @@ static void __init cm_fx6_init(void)
 
 	imx6q_add_imx_snvs_rtc();
 	imx6q_add_imx_snvs_pwrkey();
+	pm_power_off = mx6_snvs_poweroff;
 
 	imx6q_add_imx_caam();
 
