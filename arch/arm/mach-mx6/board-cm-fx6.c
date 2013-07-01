@@ -114,6 +114,8 @@
 #define EEPROM_BOARD_NAME_OFF           128
 #define EEPROM_BOARD_NAME_LEN           16
 
+#define MX6_SNVS_LPCR_REG		0x38
+
 static struct clk *sata_clk;
 static int spdif_en;
 static int flexcan_en;
@@ -1248,6 +1250,18 @@ static inline void cm_fx6_init_led(void) {}
 #endif
 
 
+static void mx6_snvs_poweroff(void)
+{
+	void __iomem *mx6_snvs_base =  MX6_IO_ADDRESS(MX6Q_SNVS_BASE_ADDR);
+	u32 value;
+
+	value = readl(mx6_snvs_base + MX6_SNVS_LPCR_REG);
+	/* set TOP and DP_EN bits */
+	value |= 0x0060;
+	writel(value, (mx6_snvs_base + MX6_SNVS_LPCR_REG));
+}
+
+
 /*!
  * Board specific initialization.
  */
@@ -1271,6 +1285,9 @@ static void __init cm_fx6_init(void)
 	 * way by U-Boot and be passed to the kernel via atags.
 	 */
 	fsl_system_rev();
+
+	/* power off handler */
+	pm_power_off = mx6_snvs_poweroff;
 
 
 	/*
