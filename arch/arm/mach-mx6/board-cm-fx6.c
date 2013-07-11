@@ -655,10 +655,10 @@ static struct gpio sata_issd_gpios[] = {
 
 	{ CM_FX6_iSSD_SATA_VDDC_CTRL,	GPIOF_IN,		"sata vddc ctrl" },
 	{ CM_FX6_iSSD_SATA_STBY_REQ,	GPIOF_IN,		"sata stby req" },
-	{ CM_FX6_iSSD_SATA_PWLOSS_INT,	GPIOF_IN,		"sata pwloss int" },
 
-	{ CM_FX6_iSSD_SATA_PHY_SLP,	GPIOF_OUT_INIT_LOW,	"sata phy slp" },
-	{ CM_FX6_iSSD_SATA_nRSTDLY,	GPIOF_OUT_INIT_LOW,	"sata nrst" },
+	{ CM_FX6_iSSD_SATA_PWLOSS_INT,	GPIOF_OUT_INIT_LOW,	"sata pwloss int" },
+	{ CM_FX6_iSSD_SATA_PHY_SLP,	GPIOF_OUT_INIT_HIGH,	"sata phy slp" },
+	{ CM_FX6_iSSD_SATA_nRSTDLY,	GPIOF_OUT_INIT_HIGH,	"sata nrst" },
 
 	/* keep the order of power sequence ! */
 	{ CM_FX6_iSSD_SATA_PWREN,	GPIOF_OUT_INIT_LOW,	"sata pwren" },		// VCC_IO
@@ -667,6 +667,14 @@ static struct gpio sata_issd_gpios[] = {
 	{ CM_FX6_iSSD_SATA_LDO_EN,	GPIOF_OUT_INIT_LOW,	"sata ldo en" },	// VDCC
 };
 
+/*
+ * SSD i100 initialization
+ * 
+ * @signals
+ * PWLOSS_INT - positive edge directs iSSD to perform quick shutdown
+ * PHY_SLP - when initialized HIGH, iSSD should proceed to deep sleep when possible,
+ *	when initialized LOW, it should be toggled HIGH by PM logic
+ */
 static int cm_fx6_iSSD_init(void)
 {
 	int i;
@@ -676,13 +684,16 @@ static int cm_fx6_iSSD_init(void)
 	if (err)
 		return err;
 
-	for (i = 0; i < ARRAY_SIZE(sata_issd_gpios); ++i) {
-		if (sata_issd_gpios[i].flags & GPIOF_DIR_IN)
-			continue;
-
+	for (i = (ARRAY_SIZE(sata_issd_gpios) - 4); i < ARRAY_SIZE(sata_issd_gpios); ++i) {
 		udelay(100);
 		gpio_set_value(sata_issd_gpios[i].gpio, 1);
 	}
+
+	// DEBUG
+	gpio_export(CM_FX6_iSSD_SATA_STBY_REQ, 0);	// in:  gpio93
+
+	gpio_export(CM_FX6_iSSD_SATA_PWLOSS_INT, 0);	// out: gpio191
+	gpio_export(CM_FX6_iSSD_SATA_PHY_SLP, 0);	// out: gpio87
 
 	/*
 	 * TODO:
@@ -696,10 +707,7 @@ static void cm_fx6_iSSD_cleanup(void)
 {
 	int i;
 
-	for (i = 0; i < ARRAY_SIZE(sata_issd_gpios); ++i) {
-		if (sata_issd_gpios[i].flags & GPIOF_DIR_IN)
-			continue;
-
+	for (i = (ARRAY_SIZE(sata_issd_gpios) - 4); i < ARRAY_SIZE(sata_issd_gpios); ++i) {
 		gpio_set_value(sata_issd_gpios[i].gpio, 0);
 	}
 
@@ -777,6 +785,7 @@ put_sata_clk:
 release_drive:
 	cm_fx6_iSSD_cleanup();
 
+	dev_err(dev, "disable SATA controller \n");
 	return ret;
 }
 
