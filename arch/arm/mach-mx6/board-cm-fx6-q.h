@@ -102,15 +102,14 @@ static iomux_v3_cfg_t cm_fx6_q_pads[] = {
 	MX6Q_PAD_KEY_COL4__USBOH3_USBOTG_OC,
 
 	MX6Q_PAD_GPIO_2__GPIO_1_2,	/* I2C-MUX Selector */
+	MX6Q_PAD_GPIO_4__GPIO_1_4,	/* SB-FX6m DVI_HPD / Himax Pendown */
+	MX6Q_PAD_NANDF_CS2__GPIO_6_15,	/* SB-FX6 DVI_HPD */
 
 	/* green LED */
 	MX6Q_PAD_EIM_EB3__GPIO_2_31,
 
 	/* ADS7846 PENDOWN */
 	MX6Q_PAD_SD4_DAT7__GPIO_2_15,
-
-	/* HX8520_C PENDOWN */
-	MX6Q_PAD_GPIO_4__GPIO_1_4,
 
 	/* USB hub reset */
 	MX6Q_PAD_SD3_RST__GPIO_7_8,

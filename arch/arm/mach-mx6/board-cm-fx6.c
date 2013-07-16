@@ -77,6 +77,7 @@
 #define CM_FX6_USBH1_PWR		IMX_GPIO_NR(1, 0)
 #define SB_FX6_DVI_DDC_SEL		IMX_GPIO_NR(1, 2)
 #define SB_FX6_HIMAX_PENDOWN		IMX_GPIO_NR(1, 4)
+#define SB_FX6m_DVI_HPD			IMX_GPIO_NR(1, 4)
 #define CM_FX6_iSSD_SATA_PWREN		IMX_GPIO_NR(1, 28)
 #define CM_FX6_iSSD_SATA_VDDC_CTRL	IMX_GPIO_NR(1, 30)
 #define CM_FX6_ADS7846_PENDOWN		IMX_GPIO_NR(2, 15)
@@ -93,6 +94,7 @@
 #define CM_FX6_iSSD_SATA_nSTDBY2	IMX_GPIO_NR(5, 2)
 #define CM_FX6_CAN2_EN			IMX_GPIO_NR(5, 24)
 #define CM_FX6_iSSD_SATA_nRSTDLY	IMX_GPIO_NR(6, 6)
+#define SB_FX6_DVI_HPD			IMX_GPIO_NR(6, 15)
 #define CM_FX6_iSSD_SATA_PWLOSS_INT	IMX_GPIO_NR(6, 31)
 #define SB_FX6_SD3_WP			IMX_GPIO_NR(7, 0)
 #define SB_FX6_SD3_CD			IMX_GPIO_NR(7, 1)
@@ -120,6 +122,7 @@ static struct clk *sata_clk;
 static int spdif_en;
 static int flexcan_en;
 static unsigned int board_rev;
+static unsigned int dvi_hpd_gpio;
 
 extern char *soc_reg_id;
 extern char *pu_reg_id;
@@ -457,11 +460,14 @@ static void __init sb_fx6_init(void)
 	sb_fx6_gpio_expander_register();
 	scf0403_lcd_register();
 	sb_fx6_touchscreen_himax_register();
+	dvi_hpd_gpio = SB_FX6_DVI_HPD;
 }
 
 static void __init sb_fx6m_init(void)
 {
 	pr_info("CM-FX6: set up SB-FX6m - Utilite device \n");
+
+	dvi_hpd_gpio = SB_FX6m_DVI_HPD;
 }
 
 static void eeprom_read_mac_address(struct memory_accessor *ma, unsigned char *mac)
@@ -597,6 +603,64 @@ static void sb_fx6_touchscreen_himax_register(void)
 
 static inline void sb_fx6_touchscreen_himax_register(void) {}
 #endif
+
+#ifdef CONFIG_FB_MXC_EDID
+static struct i2c_board_info sb_fx6_dvi_info;
+
+static void cm_fx6_dvi_init(void)
+{
+	gpio_request_one(dvi_hpd_gpio, GPIOF_IN, "dvi detect");
+}
+
+static int cm_fx6_dvi_update(void)
+{
+	int value;
+
+	if (sb_fx6_dvi_info.addr == 0x7f) {
+		/* dummy address -> report always connected */
+		value = 1;
+	} else {
+		value = gpio_get_value(dvi_hpd_gpio);
+	}
+	pr_info("DVI display: %s \n", (value ? "attach" : "detach"));
+	return value;
+}
+
+static struct fsl_mxc_dvi_platform_data cm_fx6_dvi_data = {
+	.ipu_id		= 0,
+	.disp_id	= 0,
+	.init		= cm_fx6_dvi_init,
+	.update		= cm_fx6_dvi_update,
+};
+
+static struct i2c_board_info sb_fx6_dvi_info = {
+	I2C_BOARD_INFO("mxc_dvi", 0x50),
+	.irq = 0,
+	.platform_data = &cm_fx6_dvi_data,
+};
+
+static void sb_fx6_dvi_register(void)
+{
+	sb_fx6_dvi_info.irq = gpio_to_irq(dvi_hpd_gpio);
+	cm_fx6_i2c_device_register(4, &sb_fx6_dvi_info, "DVI controller");
+}
+
+/*
+ * Older SB-FX6 revisions did not connect DVI EDID / detection lines.
+ * In this case, we will rely on default values.
+ */
+static int __init dvi_set_dummy_i2c_addr(char *p)
+{
+	sb_fx6_dvi_info.addr = 0x7f;
+	return 0;
+}
+early_param("dvi-no-edid", dvi_set_dummy_i2c_addr);
+
+#else
+
+static void sb_fx6_dvi_register(void) {}
+#endif
+
 
 static struct imxi2c_platform_data cm_fx6_i2c0_data = {
 	.bitrate = 100000,
@@ -1460,6 +1524,8 @@ static int __init cm_fx6_init_late(void)
 {
 	if (!machine_is_cm_fx6())
 		return -ENODEV;
+
+	sb_fx6_dvi_register();
 
 	cm_fx6_init_hdmi();
 	cm_fx6_init_display();
