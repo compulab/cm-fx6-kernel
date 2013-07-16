@@ -101,6 +101,8 @@ static iomux_v3_cfg_t cm_fx6_q_pads[] = {
 	MX6Q_PAD_EIM_D22__GPIO_3_22,
 	MX6Q_PAD_KEY_COL4__USBOH3_USBOTG_OC,
 
+	MX6Q_PAD_GPIO_2__GPIO_1_2,	/* I2C-MUX Selector */
+
 	/* green LED */
 	MX6Q_PAD_EIM_EB3__GPIO_2_31,
 
