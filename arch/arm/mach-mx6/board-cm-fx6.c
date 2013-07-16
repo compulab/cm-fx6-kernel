@@ -111,6 +111,7 @@
 
 #define SB_FX6_DVIT_nPD			SB_FX6_IO_EXP_GPIO(2)
 #define SB_FX6_DVIT_MSEN		SB_FX6_IO_EXP_GPIO(3)
+#define SB_FX6_DVI_HPD			SB_FX6_DVIT_MSEN
 #define SB_FX6_LCD_RST			SB_FX6_IO_EXP_GPIO(11)
 
 #define CM_FX6_PCIE_PWR_EN		SB_FX6_IO_EXP_GPIO(14)
@@ -478,6 +479,35 @@ static struct at24_platform_data eeprom_24c02 = {
 	.context	= NULL,
 };
 
+static void cm_fx6_dvi_init(void)
+{
+	int err;
+
+	err = gpio_request(SB_FX6_DVI_HPD, "dvi detect");
+	if (err)
+		return;
+
+	gpio_direction_input(SB_FX6_DVI_HPD);
+	gpio_export(SB_FX6_DVI_HPD, false);
+}
+
+static int cm_fx6_dvi_update(void)
+{
+	int value;
+
+	/* value = gpio_get_value(SB_FX6_DVI_HPD); */
+	value = 1;
+	pr_info("DVI display: %s \n", (value ? "attach" : "detach"));
+	return value;
+}
+
+static struct fsl_mxc_dvi_platform_data cm_fx6_dvi_data = {
+	.ipu_id		= 0,
+	.disp_id	= 0,
+	.init		= cm_fx6_dvi_init,
+	.update		= cm_fx6_dvi_update,
+};
+
 
 static int pca9555_setup(struct i2c_client *client,
 			 unsigned gpio_base, unsigned ngpio,
@@ -555,6 +585,13 @@ static struct i2c_board_info mxc_i2c0_board_info[] __initdata = {
 	{
 		I2C_BOARD_INFO("hx8526-a", 0x4a),
 		.irq = gpio_to_irq(SB_FX6_HIMAX_PENDOWN),
+	},
+#endif
+#ifdef CONFIG_FB_MXC_EDID
+	{
+		I2C_BOARD_INFO("mxc_dvi", 0x1f),
+		.irq = 0,	/* gpio_to_irq(SB_FX6_DVI_HPD) */
+		.platform_data = &cm_fx6_dvi_data,
 	},
 #endif
 };
@@ -844,6 +881,12 @@ static struct ipuv3_fb_platform_data cm_fx6_fb_data[] = {
 	.interface_pix_fmt	= IPU_PIX_FMT_RGB24,
 	.mode_str		= "1920x1080M@60",
 	.default_bpp		= 32,
+	.int_clk		= false,
+	}, {
+	.disp_dev		= "dvi",
+	.interface_pix_fmt	= IPU_PIX_FMT_RGB24,
+	.mode_str		= "1280x720M-24@60",
+	.default_bpp		= 24,
 	.int_clk		= false,
 	}, {
 	.disp_dev		= "lcd",

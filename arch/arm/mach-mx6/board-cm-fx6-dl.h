@@ -115,7 +115,6 @@ static iomux_v3_cfg_t cm_fx6_dl_pads[] = {
 	/* MLB150 */
 	MX6DL_PAD_GPIO_3__MLB_MLBCLK,
 	MX6DL_PAD_GPIO_6__MLB_MLBSIG,
-	MX6DL_PAD_GPIO_2__MLB_MLBDAT,
 #endif
 
 	/* green LED */
