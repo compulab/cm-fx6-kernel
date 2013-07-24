@@ -39,7 +39,6 @@
 #define SNVS_LPSR_MASK	0x0f000000
 #define SNVS_LPCR_TOP	(0x1 << 6)
 #define SNVS_LPCR_DEP_EN	(0x1 << 5)
-static struct wake_lock wakelock;
 
 struct pwrkey_drv_data {
 	void __iomem *ioaddr;
@@ -88,12 +87,11 @@ static irqreturn_t snvs_pwrkey_interrupt(int irq, void *dev_id)
 	struct pwrkey_drv_data *pdata = platform_get_drvdata(pdev);
 	void __iomem *ioaddr = pdata->ioaddr;
 	u32 lp_status, lp_cr;
-	u32 events = 0;
 
 	lp_status = __raw_readl(ioaddr + SNVS_LPSR_REG);
 	lp_cr = __raw_readl(ioaddr + SNVS_LPCR_REG);
 	printk(" =======%s()lpstatus 0x%x, lp_cr 0x%x \n",__func__, lp_status, lp_cr);
-	
+
 	if (lp_cr & SNVS_LPCR_TOP)
 		printk(" power off the pmic request trigger");
 	if (lp_cr & SNVS_LPCR_DEP_EN)
@@ -142,6 +140,7 @@ static int snvs_pwrkey_probe(struct platform_device *pdev)
 	ioaddr = pdata->ioaddr;
 	pdata->irq = platform_get_irq(pdev, 0);
 	pdata->keycode = KEY_POWER;
+
 	platform_set_drvdata(pdev, pdata);
 	lp_cr = __raw_readl(ioaddr + SNVS_LPCR_REG);
 	printk(" =======%s() lp_cr 0x%x \n",__func__, lp_cr);
@@ -150,17 +149,6 @@ static int snvs_pwrkey_probe(struct platform_device *pdev)
 	__raw_writel(lp_cr, ioaddr + SNVS_LPCR_REG);
 
 	INIT_WORK(&pdata->work, pwr_keys_work_func);
-
-	if (pdata->irq >= 0) {
-
-		ret = request_irq(pdata->irq, snvs_pwrkey_interrupt, IRQF_TRIGGER_HIGH,
-				pdev->name, pdev); 
-		if(ret < 0) {
-			dev_warn(&pdev->dev, "interrupt not available.\n");
-			pdata->irq = -1;
-		} else 
-			disable_irq(pdata->irq);
-	}
 
 	input = input_allocate_device();
 	if (!input) {
@@ -183,9 +171,18 @@ static int snvs_pwrkey_probe(struct platform_device *pdev)
 	}
 	pdata->input = input;
 	device_init_wakeup(&pdev->dev, 1);
-	enable_irq(pdata->irq);
-	printk(KERN_INFO "i.MX6 powerkey probe\n");
 
+	if (pdata->irq >= 0) {
+
+		ret = request_irq(pdata->irq, snvs_pwrkey_interrupt, IRQF_TRIGGER_HIGH,
+				pdev->name, pdev); 
+		if(ret < 0) {
+			dev_warn(&pdev->dev, "interrupt not available.\n");
+			pdata->irq = -1;
+		}
+	}
+
+	printk(KERN_INFO "i.MX6 powerkey probe\n");
 	return 0;
 
 err2:
