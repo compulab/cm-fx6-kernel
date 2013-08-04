@@ -126,7 +126,6 @@
 static struct clk *sata_clk;
 static int spdif_en;
 static int gpmi_en;
-static int flexcan_en;
 
 extern char *soc_reg_id;
 extern char *pu_reg_id;
@@ -945,18 +944,6 @@ static struct ion_platform_data imx_ion_data = {
 	},
 };
 
-/* enable CAN transceiver */
-static void mx6_flexcan0_switch(int enable)
-{
-	pr_info("FlexCAN %s \n", (enable ? "ON" : "OFF"));
-}
-
-static const struct flexcan_platform_data cm_fx6_flexcan_pdata[] __initconst = {
-	{
-		.transceiver_switch = mx6_flexcan0_switch,
-	}
-};
-
 static void arm2_suspend_enter(void)
 {
 	/* suspend preparation */
@@ -1181,14 +1168,6 @@ static int __init early_enable_gpmi(char *p)
 
 early_param("gpmi", early_enable_gpmi);
 
-static int __init early_enable_can(char *p)
-{
-	flexcan_en = 1;
-	return 0;
-}
-
-early_param("flexcan", early_enable_can);
-
 static int spdif_clk_set_rate(struct clk *clk, unsigned long rate)
 {
 	unsigned long rate_actual;
@@ -1377,11 +1356,9 @@ static void __init cm_fx6_init(void)
 {
 	iomux_v3_cfg_t *common_pads = NULL;
 	iomux_v3_cfg_t *spdif_pads = NULL;
-	iomux_v3_cfg_t *flexcan_pads = NULL;
 
 	int common_pads_cnt;
 	int spdif_pads_cnt;
-	int flexcan_pads_cnt;
 
 
 	/* 
@@ -1400,19 +1377,15 @@ static void __init cm_fx6_init(void)
 	if (cpu_is_mx6q()) {
 		common_pads = cm_fx6_q_pads;
 		spdif_pads = cm_fx6_q_spdif_pads;
-		flexcan_pads = cm_fx6_q_can_pads;
 
 		common_pads_cnt = ARRAY_SIZE(cm_fx6_q_pads);
 		spdif_pads_cnt =  ARRAY_SIZE(cm_fx6_q_spdif_pads);
-		flexcan_pads_cnt = ARRAY_SIZE(cm_fx6_q_can_pads);
 	} else if (cpu_is_mx6dl()) {
 		common_pads = cm_fx6_dl_pads;
 		spdif_pads = cm_fx6_dl_spdif_pads;
-		flexcan_pads = cm_fx6_dl_can_pads;
 
 		common_pads_cnt = ARRAY_SIZE(cm_fx6_dl_pads);
 		spdif_pads_cnt =  ARRAY_SIZE(cm_fx6_dl_spdif_pads);
-		flexcan_pads_cnt = ARRAY_SIZE(cm_fx6_dl_can_pads);
 	}
 
 	BUG_ON(!common_pads);
@@ -1421,12 +1394,6 @@ static void __init cm_fx6_init(void)
 	if (spdif_en) {
 		BUG_ON(!spdif_pads);
  		mxc_iomux_v3_setup_multiple_pads(spdif_pads, spdif_pads_cnt);
-	}
-
-	if (flexcan_en) {
-		BUG_ON(!flexcan_pads);
-		mxc_iomux_v3_setup_multiple_pads(flexcan_pads,
-						flexcan_pads_cnt);
 	}
 
 	/*
@@ -1502,10 +1469,8 @@ static void __init cm_fx6_init(void)
 		imx6q_add_spdif_audio_device();
 	}
 
-	if (flexcan_en) {
-		/* can1 can optionally be supported */
-		imx6q_add_flexcan0(&cm_fx6_flexcan_pdata[0]);
-	}
+	/* can1 can optionally be supported */
+	imx6q_add_flexcan0(NULL);
 
 	imx6q_add_hdmi_soc();
 	imx6q_add_hdmi_soc_dai();
