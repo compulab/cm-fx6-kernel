@@ -970,6 +970,24 @@ static struct fsl_mxc_hdmi_core_platform_data hdmi_core_data = {
 	.disp_id	= 0,
 };
 
+static struct platform_device mxc_hdmi_audio_device = {
+	.name           = "mxc_hdmi_audio",
+	.id             = -1,
+};
+
+static void __init cm_fx6_init_hdmi(void)
+{
+	imx6q_add_mxc_hdmi_core(&hdmi_core_data);
+	imx6q_add_mxc_hdmi(&hdmi_data);
+}
+
+static void __init cm_fx6_init_hdmi_audio(void)
+{
+	imx6q_add_hdmi_soc();
+	imx6q_add_hdmi_soc_dai();
+	platform_device_register(&mxc_hdmi_audio_device);
+}
+
 static struct fsl_mxc_lcd_platform_data lcdif_data = {
 	.ipu_id		= 0,
 	.disp_id	= 0,
@@ -994,6 +1012,33 @@ static struct imx_ipuv3_platform_data ipu_data[] = {
 	.csi_clk[0]	= "clko_clk",
 	},
 };
+
+static void __init cm_fx6_init_ipu(void)
+{
+	imx6q_add_ipuv3(0, &ipu_data[0]);
+	if (cpu_is_mx6q())
+		imx6q_add_ipuv3(1, &ipu_data[1]);
+}
+
+static void __init cm_fx6_init_display(void)
+{
+	int i;
+	int count = 0;
+
+	imx6q_add_vdoa();
+	imx6q_add_lcdif(&lcdif_data);
+
+	if (cpu_is_mx6q())
+		count = min(ARRAY_SIZE(cm_fx6_fb_data), (size_t)4);
+	else if (cpu_is_mx6dl())
+		count = min(ARRAY_SIZE(cm_fx6_fb_data), (size_t)2);
+
+	for (i = 0; i < count; ++i)
+		imx6q_add_ipuv3fb(i, &cm_fx6_fb_data[i]);
+
+	imx6q_add_ldb(&ldb_data);
+	imx6q_add_v4l2_output(0);
+}
 
 #if defined(CONFIG_BACKLIGHT_PWM)
 static struct platform_pwm_backlight_data sb_fx6_pwm_backlight_data = {
@@ -1267,7 +1312,6 @@ static void mx6_snvs_poweroff(void)
  */
 static void __init cm_fx6_init(void)
 {
-	int i;
 	int ret;
 
 	iomux_v3_cfg_t *common_pads = NULL;
@@ -1343,26 +1387,7 @@ static void __init cm_fx6_init(void)
 	pu_reg_id = cm_fx6_dvfscore_data.pu_id;
 	cm_fx6_init_uart();
 
-	imx6q_add_mxc_hdmi_core(&hdmi_core_data);
-
-	imx6q_add_ipuv3(0, &ipu_data[0]);
-	if (cpu_is_mx6q())
-		imx6q_add_ipuv3(1, &ipu_data[1]);
-
-	if (cpu_is_mx6dl()) {
-		ldb_data.ipu_id = 0;
-		ldb_data.disp_id = 0;
-		for (i = 0; i < ARRAY_SIZE(cm_fx6_fb_data) / 2; i++)
-			imx6q_add_ipuv3fb(i, &cm_fx6_fb_data[i]);
-	} else {
-		for (i = 0; i < ARRAY_SIZE(cm_fx6_fb_data); i++)
-			imx6q_add_ipuv3fb(i, &cm_fx6_fb_data[i]);
-	}
-
-	imx6q_add_vdoa();
-	imx6q_add_lcdif(&lcdif_data);
-	imx6q_add_ldb(&ldb_data);
-	imx6q_add_v4l2_output(0);
+	cm_fx6_init_ipu();
 
 	imx6q_add_imx_snvs_rtc();
 
@@ -1371,8 +1396,6 @@ static void __init cm_fx6_init(void)
 	cm_fx6_init_i2c();
 	cm_fx6_init_led();
 	cm_fx6_init_spi();
-
-	imx6q_add_mxc_hdmi(&hdmi_data);
 
 	imx6q_add_anatop_thermal_imx(1, &cm_fx6_anatop_thermal_data);
 
@@ -1423,8 +1446,6 @@ static void __init cm_fx6_init(void)
 		}
 	}
 
-	imx6q_add_hdmi_soc();
-	imx6q_add_hdmi_soc_dai();
 	imx6q_add_perfmon(0);
 	imx6q_add_perfmon(1);
 	imx6q_add_perfmon(2);
@@ -1434,6 +1455,18 @@ static void __init cm_fx6_init(void)
 	imx6q_add_pcie(&cm_fx6_pcie_data);
 	imx6q_add_busfreq();
 }
+
+static int __init cm_fx6_init_late(void)
+{
+	if (!machine_is_cm_fx6())
+		return -ENODEV;
+
+	cm_fx6_init_hdmi();
+	cm_fx6_init_display();
+	cm_fx6_init_hdmi_audio();
+	return 0;
+}
+device_initcall_sync(cm_fx6_init_late);
 
 extern void __iomem *twd_base;
 static void __init mx6_timer_init(void)
