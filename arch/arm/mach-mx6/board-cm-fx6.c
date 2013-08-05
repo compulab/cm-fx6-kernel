@@ -832,7 +832,7 @@ static struct imx_asrc_platform_data imx_asrc_data = {
 	.clk_map_ver	= 2,
 };
 
-static struct ipuv3_fb_platform_data sabr_fb_data[] = {
+static struct ipuv3_fb_platform_data cm_fx6_fb_data[] = {
 	{ /*fb0*/
 	.disp_dev		= "ldb",
 	.interface_pix_fmt	= IPU_PIX_FMT_RGB24,
@@ -888,6 +888,24 @@ static struct fsl_mxc_hdmi_core_platform_data hdmi_core_data = {
 	.ipu_id		= 0,
 	.disp_id	= 0,
 };
+
+static struct platform_device mxc_hdmi_audio_device = {
+	.name           = "mxc_hdmi_audio",
+	.id             = -1,
+};
+
+static void __init cm_fx6_init_hdmi(void)
+{
+	imx6q_add_mxc_hdmi_core(&hdmi_core_data);
+	imx6q_add_mxc_hdmi(&hdmi_data);
+}
+
+static void __init cm_fx6_init_hdmi_audio(void)
+{
+	imx6q_add_hdmi_soc();
+	imx6q_add_hdmi_soc_dai();
+	platform_device_register(&mxc_hdmi_audio_device);
+}
 
 static struct fsl_mxc_lcd_platform_data lcdif_data = {
 	.ipu_id		= 0,
@@ -1298,41 +1316,29 @@ static void cm_fx6_init_wifi(void)
 }
 
 
-static void cm_fx6_init_display(void)
+static void __init cm_fx6_init_ipu(void)
+{
+	imx6q_add_ipuv3(0, &ipu_data[0]);
+	if (cpu_is_mx6q())
+		imx6q_add_ipuv3(1, &ipu_data[1]);
+}
+
+static void __init cm_fx6_init_display(void)
 {
 	int i;
 	int count;
 
-	/* 
-	 * initialize DVI transmitter on the base board (SiI164C)
-	 * TODO:
-	 * handle display detection via DVIT_MSEN pin
-	 */
-	gpio_request(SB_FX6_DVIT_nPD, "dvi trans pwrdown");
-	gpio_request(SB_FX6_DVIT_MSEN, "dvi trans disp detected");
-	gpio_direction_output(SB_FX6_DVIT_nPD, 1);
-	gpio_direction_input(SB_FX6_DVIT_MSEN);
-
-
-	imx6q_add_mxc_hdmi_core(&hdmi_core_data);
-	imx6q_add_mxc_hdmi(&hdmi_data);
-
-
-	imx6q_add_ipuv3(0, &ipu_data[0]);
-	if (cpu_is_mx6q())
-		imx6q_add_ipuv3(1, &ipu_data[1]);
-
-	count = ARRAY_SIZE(sabr_fb_data);
+	count = ARRAY_SIZE(cm_fx6_fb_data);
 	if (cpu_is_mx6dl())
 		count /= 2;
-
-	for (i = 0; i < count; ++i)
-		imx6q_add_ipuv3fb(i, &sabr_fb_data[i]);
 
 	imx6q_add_vdoa();
 	imx6q_add_lcdif(&lcdif_data);
 	imx6q_add_ldb(&ldb_data);
 	imx6q_add_v4l2_output(0);
+
+	for (i = 0; i < count; ++i)
+		imx6q_add_ipuv3fb(i, &cm_fx6_fb_data[i]);
 }
 
 
@@ -1409,7 +1415,7 @@ static void __init cm_fx6_init(void)
 	pu_reg_id = arm2_dvfscore_data.pu_id;
 	cm_fx6_init_uart();
 
-	cm_fx6_init_display();
+	cm_fx6_init_ipu();
 
 	imx6q_add_imx_snvs_rtc();
 	imx6q_add_imx_snvs_pwrkey();
@@ -1472,8 +1478,6 @@ static void __init cm_fx6_init(void)
 	/* can1 can optionally be supported */
 	imx6q_add_flexcan0(NULL);
 
-	imx6q_add_hdmi_soc();
-	imx6q_add_hdmi_soc_dai();
 	imx6q_add_perfmon(0);
 	imx6q_add_perfmon(1);
 	imx6q_add_perfmon(2);
@@ -1483,6 +1487,15 @@ static void __init cm_fx6_init(void)
 	imx6q_add_pcie(&cm_fx6_pcie_data);
 	imx6q_add_busfreq();
 }
+
+static int __init cm_fx6_init_late(void)
+{
+	cm_fx6_init_hdmi();
+	cm_fx6_init_display();
+	cm_fx6_init_hdmi_audio();
+	return 0;
+}
+device_initcall_sync(cm_fx6_init_late);
 
 extern void __iomem *twd_base;
 static void __init mx6_timer_init(void)
