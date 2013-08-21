@@ -983,6 +983,7 @@ static int fsl_otg_conf(struct platform_device *pdev)
 	fsl_otg_tc->otg.start_hnp = fsl_otg_start_hnp;
 	fsl_otg_tc->otg.start_srp = fsl_otg_start_srp;
 	fsl_otg_tc->otg.dev = &pdev->dev;
+	spin_lock_init(&fsl_otg_tc->otg.notifier.lock);
 	fsl_otg_tc->host_first_call = false;
 
 	fsl_otg_dev = fsl_otg_tc;

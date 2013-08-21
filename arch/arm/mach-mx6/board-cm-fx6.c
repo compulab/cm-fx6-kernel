@@ -221,13 +221,13 @@ static int plt_sd_pad_change(unsigned int index, int clock)
 	}
 }
 
-static const struct esdhc_platform_data cm_fx6_sd1_data __initconst = {
+static const struct esdhc_platform_data cm_fx6_sd1_data = {
 	.always_present         = 1,
 	.keep_power_at_suspend  = 1,
 	.platform_pad_change	= plt_sd_pad_change,
 };
 
-static const struct esdhc_platform_data cm_fx6_sd3_data __initconst = {
+static const struct esdhc_platform_data cm_fx6_sd3_data = {
 	.cd_gpio		= CM_FX6_SD3_CD,
 	.wp_gpio		= CM_FX6_SD3_WP,
 	.support_8bit		= 1,
@@ -237,7 +237,7 @@ static const struct esdhc_platform_data cm_fx6_sd3_data __initconst = {
 	.cd_type		= ESDHC_CD_GPIO,
 };
 
-static int __init gpmi_nand_platform_init(void)
+static int gpmi_nand_platform_init(void)
 {
 	iomux_v3_cfg_t *nand_pads = NULL;
 	u32 nand_pads_cnt;
@@ -262,8 +262,7 @@ static struct mtd_partition gpmi_nand_partitions[] = {
 	},
 };
 
-static struct gpmi_nand_platform_data
-mx6_gpmi_nand_platform_data __initdata = {
+static struct gpmi_nand_platform_data mx6_gpmi_nand_platform_data = {
 	.platform_init           = gpmi_nand_platform_init,
 	.min_prop_delay_in_ns    = 5,
 	.max_prop_delay_in_ns    = 9,
@@ -274,8 +273,7 @@ mx6_gpmi_nand_platform_data __initdata = {
 	.enable_ddr              = 0,
 };
 
-static const struct anatop_thermal_platform_data
-	cm_fx6_anatop_thermal_data __initconst = {
+static const struct anatop_thermal_platform_data cm_fx6_anatop_thermal_data = {
 	.name = "anatop_thermal",
 };
 
@@ -332,7 +330,7 @@ static int cm_fx6_fec_power_hibernate(struct phy_device *phydev)
 	return 0;
 }
 
-static struct fec_platform_data fec_data __initdata = {
+static struct fec_platform_data fec_data = {
 	.init			= cm_fx6_fec_phy_init,
 	.power_hibernate	= cm_fx6_fec_power_hibernate,
 	.phy			= PHY_INTERFACE_MODE_RGMII,
@@ -1217,7 +1215,7 @@ static struct mxc_spdif_platform_data mxc_spdif_data = {
 	.spdif_clk		= NULL, /* spdif bus clk */
 };
 
-static const struct imx_pcie_platform_data cm_fx6_pcie_data  __initconst = {
+static const struct imx_pcie_platform_data cm_fx6_pcie_data = {
 	.pcie_pwr_en	= CM_FX6_PCIE_PWR_EN,
 	.pcie_rst	= CM_FX6_PCIE_RESET,
 	.pcie_wake_up	= -EINVAL,

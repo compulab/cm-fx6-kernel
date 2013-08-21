@@ -201,7 +201,7 @@ static iomux_v3_cfg_t MX6DL_USDHC_PAD_SETTING_HALF(1, 50);
 static iomux_v3_cfg_t MX6DL_USDHC_PAD_SETTING_HALF(1, 100);
 static iomux_v3_cfg_t MX6DL_USDHC_PAD_SETTING_HALF(1, 200);
 
-static iomux_v3_cfg_t mx6dl_gpmi_nand[] __initdata = {
+static iomux_v3_cfg_t mx6dl_gpmi_nand[] = {
 	MX6DL_PAD_NANDF_CLE__RAWNAND_CLE,
 	MX6DL_PAD_NANDF_ALE__RAWNAND_ALE,
 	MX6DL_PAD_NANDF_CS0__RAWNAND_CE0N,
