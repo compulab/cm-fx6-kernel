@@ -1884,18 +1884,7 @@ static void mxc_hdmi_set_mode(struct mxc_hdmi *hdmi)
 
 	dev_dbg(&hdmi->pdev->dev, "%s\n", __func__);
 
-	/* Set the default mode only once. */
-	if (!hdmi->dft_mode_set) {
-		dev_dbg(&hdmi->pdev->dev, "%s: setting to default=%s bpp=%d\n",
-			__func__, hdmi->dft_mode_str, hdmi->default_bpp);
-
-		fb_find_mode(&var, hdmi->fbi,
-			     hdmi->dft_mode_str, NULL, 0, NULL,
-			     hdmi->default_bpp);
-
-		hdmi->dft_mode_set = true;
-	} else
-		fb_videomode_to_var(&var, &hdmi->previous_non_vga_mode);
+	fb_videomode_to_var(&var, &hdmi->previous_non_vga_mode);
 
 	fb_var_to_videomode(&m, &var);
 	dump_fb_videomode(&m);
@@ -1950,6 +1939,8 @@ static void mxc_hdmi_cable_connected(struct mxc_hdmi *hdmi)
 		hdmi->fbi->var.height = hdmi->fbi->monspecs.max_y * 10;
 
 		mxc_hdmi_edid_rebuild_modelist(hdmi);
+		pr_info("%s: rebuild EDID modelist: \n", __func__);
+		fb_print_modelist(&hdmi->fbi->modelist);
 		break;
 
 	/* Nothing to do if EDID same */
@@ -1962,6 +1953,8 @@ static void mxc_hdmi_cable_connected(struct mxc_hdmi *hdmi)
 	case HDMI_EDID_NO_MODES:
 	default:
 		mxc_hdmi_default_modelist(hdmi);
+		pr_info("%s: fall back to default EDID modelist: \n", __func__);
+		fb_print_modelist(&hdmi->fbi->modelist);
 		break;
 	}
 
@@ -2020,7 +2013,7 @@ static void hotplug_worker(struct work_struct *work)
 		/* cable connection changes */
 		if (phy_int_pol & HDMI_PHY_HPD) {
 			/* Plugin event */
-			dev_dbg(&hdmi->pdev->dev, "EVENT=plugin\n");
+			dev_info(&hdmi->pdev->dev, "EVENT=plugin\n");
 			mxc_hdmi_cable_connected(hdmi);
 
 			/* Make HPD intr active low to capture unplug event */
@@ -2040,7 +2033,7 @@ static void hotplug_worker(struct work_struct *work)
 
 		} else if (!(phy_int_pol & HDMI_PHY_HPD)) {
 			/* Plugout event */
-			dev_dbg(&hdmi->pdev->dev, "EVENT=plugout\n");
+			dev_info(&hdmi->pdev->dev, "EVENT=plugout\n");
 			switch_set_state(&hdmi->sdev_audio, 0);
 			switch_set_state(&hdmi->sdev_display, 0);
 
@@ -2168,8 +2161,10 @@ static void mxc_hdmi_setup(struct mxc_hdmi *hdmi, unsigned long event)
 
 	fb_var_to_videomode(&m, &hdmi->fbi->var);
 	dump_fb_videomode(&m);
-
-	dev_dbg(&hdmi->pdev->dev, "%s - video mode changed\n", __func__);
+	dev_info(&hdmi->pdev->dev, "%s: video mode changed: %ux%u@%u-%u -> %ux%u@%u-%u \n",
+		 __func__, hdmi->previous_mode.xres, hdmi->previous_mode.yres,
+		 hdmi->previous_mode.refresh, hdmi->previous_mode.pixclock,
+		 m.xres, m.yres, m.refresh, m.pixclock);
 
 	/* Save mode as 'previous_mode' so that we can know if mode changed. */
 	memcpy(&hdmi->previous_mode, &m, sizeof(struct fb_videomode));
@@ -2399,7 +2394,6 @@ static int mxc_hdmi_disp_init(struct mxc_dispdrv_handle *disp,
 			      struct mxc_dispdrv_setting *setting)
 {
 	int ret = 0;
-	u32 i;
 	const struct fb_videomode *mode;
 	struct fb_videomode m;
 	struct mxc_hdmi *hdmi = mxc_dispdrv_getdata(disp);
@@ -2498,30 +2492,16 @@ static int mxc_hdmi_disp_init(struct mxc_dispdrv_handle *disp,
 	spin_lock_init(&hdmi->irq_lock);
 
 	/* Set the default mode and modelist when disp init. */
+	mxc_hdmi_default_modelist(hdmi);
 	fb_find_mode(&hdmi->fbi->var, hdmi->fbi,
 		     hdmi->dft_mode_str, NULL, 0, NULL,
 		     hdmi->default_bpp);
 
-	console_lock();
-
-	fb_destroy_modelist(&hdmi->fbi->modelist);
-
-	/*Add all no interlaced CEA mode to default modelist */
-	for (i = 0; i < ARRAY_SIZE(mxc_cea_mode); i++) {
-		mode = &mxc_cea_mode[i];
-		if (!(mode->vmode & FB_VMODE_INTERLACED) && (mode->xres != 0))
-			fb_add_videomode(mode, &hdmi->fbi->modelist);
-	}
-
-	/*Add XGA and SXGA to default modelist */
-	fb_add_videomode(&xga_mode, &hdmi->fbi->modelist);
-	fb_add_videomode(&sxga_mode, &hdmi->fbi->modelist);
-
-	console_unlock();
-
 	/* Find a nearest mode in default modelist */
 	fb_var_to_videomode(&m, &hdmi->fbi->var);
 	dump_fb_videomode(&m);
+	memcpy(&hdmi->previous_non_vga_mode, &m,
+	       sizeof(struct fb_videomode));
 
 	mode = fb_find_nearest_mode(&m, &hdmi->fbi->modelist);
 	if (!mode) {
@@ -2565,25 +2545,25 @@ static int mxc_hdmi_disp_init(struct mxc_dispdrv_handle *disp,
 	ret = device_create_file(&hdmi->pdev->dev, &dev_attr_fb_name);
 	if (ret < 0)
 		dev_warn(&hdmi->pdev->dev,
-			"cound not create sys node for fb name\n");
+			"could not create sys node for fb name\n");
 	ret = device_create_file(&hdmi->pdev->dev, &dev_attr_cable_state);
 	if (ret < 0)
 		dev_warn(&hdmi->pdev->dev,
-			"cound not create sys node for cable state\n");
+			"could not create sys node for cable state\n");
 	ret = device_create_file(&hdmi->pdev->dev, &dev_attr_edid);
 	if (ret < 0)
 		dev_warn(&hdmi->pdev->dev,
-			"cound not create sys node for edid\n");
+			"could not create sys node for edid\n");
 
 	ret = device_create_file(&hdmi->pdev->dev, &dev_attr_rgb_out_enable);
 	if (ret < 0)
 		dev_warn(&hdmi->pdev->dev,
-			"cound not create sys node for rgb out enable\n");
+			"could not create sys node for rgb out enable\n");
 
 	ret = device_create_file(&hdmi->pdev->dev, &dev_attr_hdcp_enable);
 	if (ret < 0)
 		dev_warn(&hdmi->pdev->dev,
-			"cound not create sys node for hdcp enable\n");
+			"could not create sys node for hdcp enable\n");
 
 	dev_dbg(&hdmi->pdev->dev, "%s exit\n", __func__);
 
