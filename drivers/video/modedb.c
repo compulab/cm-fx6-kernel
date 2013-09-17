@@ -1119,6 +1119,20 @@ finished:
 }
 EXPORT_SYMBOL(fb_find_best_display);
 
+void fb_print_modelist(struct list_head *head)
+{
+	struct list_head *pos;
+	struct fb_modelist *modelist;
+	struct fb_videomode *m;
+	int i = 0;
+
+	list_for_each(pos, head) {
+		modelist = list_entry(pos, struct fb_modelist, list);
+		m = &modelist->mode;
+		printk(KERN_INFO"%2d) %ux%u@%u \n", ++i, m->xres, m->yres, m->pixclock);
+	}
+}
+
 EXPORT_SYMBOL(fb_videomode_to_var);
 EXPORT_SYMBOL(fb_var_to_videomode);
 EXPORT_SYMBOL(fb_mode_is_equal);
