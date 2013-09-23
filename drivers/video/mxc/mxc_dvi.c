@@ -113,6 +113,94 @@ static ssize_t mxc_dvi_show_edid(struct device *dev,
 
 static DEVICE_ATTR(edid, S_IRUGO, mxc_dvi_show_edid, NULL);
 
+/* 
+ * Create modelist based on EDID information.
+ */
+static void mxc_dvi_edid_rebuild_modelist(struct mxc_dvi_data *dvi)
+{
+	int i;
+	struct fb_videomode *mode;
+
+	dev_dbg(&dvi->pdev->dev, "%s\n", __func__);
+
+	fb_destroy_modelist(&dvi->fbi->modelist);
+
+	/* 
+	 * FIXME:
+	 * interlaced mode is not currently supported 
+	 */
+	for (i = 0; i < dvi->fbi->monspecs.modedb_len; i++) {
+		mode = &dvi->fbi->monspecs.modedb[i];
+		if (!(mode->vmode & FB_VMODE_INTERLACED)) {
+			fb_add_videomode(mode, &dvi->fbi->modelist);
+		}
+	}
+
+	pr_info("MXC dvi: rebuild EDID modelist: \n");
+	fb_print_modelist(&dvi->fbi->modelist);
+}
+
+/* 
+ * In case no EDID information is available,
+ * create default modelist.
+ */ 
+extern const struct fb_videomode mxc_cea_mode[64];
+
+static void  mxc_dvi_default_modelist(struct mxc_dvi_data *dvi)
+{
+	u32 i;
+	const struct fb_videomode *mode;
+
+	dev_dbg(&dvi->pdev->dev, "%s\n", __func__);
+
+	fb_destroy_modelist(&dvi->fbi->modelist);
+
+	/* Add all non-interlaced CEA modes to default modelist */
+	for (i = 0; i < ARRAY_SIZE(mxc_cea_mode); i++) {
+		mode = &mxc_cea_mode[i];
+		if (!(mode->vmode & FB_VMODE_INTERLACED) && (mode->xres != 0))
+			fb_add_videomode(mode, &dvi->fbi->modelist);
+	}
+
+	pr_info("MXC dvi: default modelist: \n");
+	fb_print_modelist(&dvi->fbi->modelist);
+}
+
+static void mxc_dvi_set_mode(struct mxc_dvi_data *dvi)
+{
+	const struct fb_videomode *mode;
+	struct fb_videomode m;
+
+	dev_dbg(&dvi->pdev->dev, "%s\n", __func__);
+
+	fb_var_to_videomode(&m, &dvi->fbi->var);
+
+	mode = fb_find_nearest_mode(&m,	&dvi->fbi->modelist);
+	if (!mode) {
+		pr_err("%s: could not find mode in modelist\n", __func__);
+		return;
+	}
+
+	fb_videomode_to_var(&dvi->fbi->var, mode);
+}
+
+static void mxc_dvi_activate_mode(struct mxc_dvi_data *dvi)
+{
+	struct fb_info *fb_info = dvi->fbi;
+	struct fb_var_screeninfo *var = &dvi->fbi->var;
+	int err;
+
+	var->activate |= FB_ACTIVATE_FORCE;
+	console_lock();
+	fb_info->flags |= FBINFO_MISC_USEREVENT;
+	err = fb_set_var(fb_info, var);
+	fb_info->flags &= ~FBINFO_MISC_USEREVENT;
+	console_unlock();
+	if (err) {
+		dev_err(&dvi->pdev->dev, "%s: could not activate mode: %d\n", __func__, err);
+	}
+}
+
 static void det_worker(struct work_struct *work)
 {
 	struct delayed_work *delay_work = to_delayed_work(work);
@@ -124,45 +212,27 @@ static void det_worker(struct work_struct *work)
 	/* cable connection changes */
 	if (dvi->update()) {
 		u8 edid_old[MXC_EDID_LENGTH];
+		int ret;
+
 		dvi->cable_plugin = 1;
 		sprintf(event_string, "EVENT=plugin");
 
 		memcpy(edid_old, dvi->edid, MXC_EDID_LENGTH);
+		ret = mxc_edid_read(dvi->client->adapter, dvi->client->addr,
+				    dvi->edid, &dvi->edid_cfg, dvi->fbi);
 
-		if (mxc_edid_read(dvi->client->adapter, dvi->client->addr,
-				dvi->edid, &dvi->edid_cfg, dvi->fbi) < 0)
-			dev_err(&dvi->client->dev,
-					"MXC dvi: read edid fail\n");
+		if ((ret < 0) || (dvi->fbi->monspecs.modedb_len == 0)) {
+			mxc_dvi_default_modelist(dvi);
+			mxc_dvi_set_mode(dvi);
+			mxc_dvi_activate_mode(dvi);
+		}
+		else if (!memcmp(edid_old, dvi->edid, MXC_EDID_LENGTH)) {
+			dev_info(&dvi->client->dev, "MXC dvi: same edid \n");
+		}
 		else {
-			if (!memcmp(edid_old, dvi->edid, MXC_EDID_LENGTH))
-				dev_info(&dvi->client->dev,
-					"MXC dvi: same edid\n");
-			else if (dvi->fbi->monspecs.modedb_len > 0) {
-				int i;
-				const struct fb_videomode *mode;
-				struct fb_videomode m;
-
-				fb_destroy_modelist(&dvi->fbi->modelist);
-
-				for (i = 0; i < dvi->fbi->monspecs.modedb_len; i++)
-					/*FIXME now we do not support interlaced mode */
-					if (!(dvi->fbi->monspecs.modedb[i].vmode & FB_VMODE_INTERLACED))
-						fb_add_videomode(&dvi->fbi->monspecs.modedb[i],
-								&dvi->fbi->modelist);
-
-				fb_var_to_videomode(&m, &dvi->fbi->var);
-				mode = fb_find_nearest_mode(&m,
-						&dvi->fbi->modelist);
-
-				fb_videomode_to_var(&dvi->fbi->var, mode);
-
-				dvi->fbi->var.activate |= FB_ACTIVATE_FORCE;
-				console_lock();
-				dvi->fbi->flags |= FBINFO_MISC_USEREVENT;
-				fb_set_var(dvi->fbi, &dvi->fbi->var);
-				dvi->fbi->flags &= ~FBINFO_MISC_USEREVENT;
-				console_unlock();
-			}
+			mxc_dvi_edid_rebuild_modelist(dvi);
+			mxc_dvi_set_mode(dvi);
+			mxc_dvi_activate_mode(dvi);
 		}
 	} else {
 		dvi->cable_plugin = 0;
@@ -180,7 +250,7 @@ static irqreturn_t mxc_dvi_detect_handler(int irq, void *data)
 }
 
 static int dvi_init(struct mxc_dispdrv_handle *disp,
-	struct mxc_dispdrv_setting *setting)
+		    struct mxc_dispdrv_setting *setting)
 {
 	int ret = 0;
 	struct mxc_dvi_data *dvi = mxc_dispdrv_getdata(disp);
@@ -205,48 +275,33 @@ static int dvi_init(struct mxc_dispdrv_handle *disp,
 	/* get video mode from edid */
 	if (!dvi->update)
 		return -EINVAL;
-	else {
-		bool found = false;
 
-		INIT_LIST_HEAD(&dvi->fbi->modelist);
-		if (dvi->update()) {
-			dvi->cable_plugin = 1;
-			/* try to read edid */
-			if (mxc_edid_read(dvi->client->adapter, dvi->client->addr,
-					dvi->edid, &dvi->edid_cfg, dvi->fbi) < 0)
-				dev_warn(&dvi->client->dev, "Can not read edid\n");
-			else if (dvi->fbi->monspecs.modedb_len > 0) {
-				int i;
-				const struct fb_videomode *mode;
-				struct fb_videomode m;
+	ret = fb_find_mode(&dvi->fbi->var, dvi->fbi, setting->dft_mode_str,
+			   NULL, 0, NULL, setting->default_bpp);
+	if (!ret)
+		return -EINVAL;
 
-				for (i = 0; i < dvi->fbi->monspecs.modedb_len; i++) {
-					/*FIXME now we do not support interlaced mode */
-					if (!(dvi->fbi->monspecs.modedb[i].vmode
-						& FB_VMODE_INTERLACED))
-						fb_add_videomode(
-							&dvi->fbi->monspecs.modedb[i],
-							&dvi->fbi->modelist);
-				}
+	INIT_LIST_HEAD(&dvi->fbi->modelist);
+	dvi->cable_plugin = 0;
 
-				fb_find_mode(&dvi->fbi->var, dvi->fbi, setting->dft_mode_str,
-						NULL, 0, NULL, setting->default_bpp);
+	if (dvi->update()) {
+		dvi->cable_plugin = 1;
 
-				fb_var_to_videomode(&m, &dvi->fbi->var);
-				mode = fb_find_nearest_mode(&m,
-						&dvi->fbi->modelist);
-				fb_videomode_to_var(&dvi->fbi->var, mode);
-				found = 1;
-			}
-		} else
-			dvi->cable_plugin = 0;
+		ret = mxc_edid_read(dvi->client->adapter, dvi->client->addr,
+				    dvi->edid, &dvi->edid_cfg, dvi->fbi);
 
-		if (!found) {
-			ret = fb_find_mode(&dvi->fbi->var, dvi->fbi, setting->dft_mode_str,
-					NULL, 0, NULL, setting->default_bpp);
-			if (!ret)
-				return -EINVAL;
+		if ((ret < 0) || (dvi->fbi->monspecs.modedb_len == 0)) {
+			dev_warn(&dvi->client->dev, "Cannot read edid\n");
+			mxc_dvi_default_modelist(dvi);
+			ret = 0;
 		}
+		else {
+			mxc_dvi_edid_rebuild_modelist(dvi);
+		}
+
+		fb_find_mode(&dvi->fbi->var, dvi->fbi, setting->dft_mode_str,
+			     NULL, 0, NULL, setting->default_bpp);
+		mxc_dvi_set_mode(dvi);
 	}
 
 	/* cable detection */
@@ -256,7 +311,7 @@ static int dvi_init(struct mxc_dispdrv_handle *disp,
 				"dvi_det", dvi);
 		if (ret < 0) {
 			dev_warn(&dvi->client->dev,
-				"MXC dvi: cound not request det irq %d\n",
+				"MXC dvi: could not request det irq %d\n",
 				dvi->client->irq);
 			goto err;
 		} else {
@@ -264,15 +319,15 @@ static int dvi_init(struct mxc_dispdrv_handle *disp,
 			ret = device_create_file(&dvi->pdev->dev, &dev_attr_fb_name);
 			if (ret < 0)
 				dev_warn(&dvi->client->dev,
-					"MXC dvi: cound not create sys node for fb name\n");
+					"MXC dvi: could not create sys node for fb name\n");
 			ret = device_create_file(&dvi->pdev->dev, &dev_attr_cable_state);
 			if (ret < 0)
 				dev_warn(&dvi->client->dev,
-					"MXC dvi: cound not create sys node for cable state\n");
+					"MXC dvi: could not create sys node for cable state\n");
 			ret = device_create_file(&dvi->pdev->dev, &dev_attr_edid);
 			if (ret < 0)
 				dev_warn(&dvi->client->dev,
-					"MXC dvi: cound not create sys node for edid\n");
+					"MXC dvi: could not create sys node for edid\n");
 
 			dev_set_drvdata(&dvi->pdev->dev, dvi);
 		}
