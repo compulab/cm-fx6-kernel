@@ -59,6 +59,9 @@
 
 /* Display port number */
 #define MXCFB_PORT_NUM	2
+
+#define  ALIGN_PIXEL_128(x)	((x + 127) & ~127)
+
 /*!
  * Structure containing the MXC specific framebuffer information.
  */
@@ -897,8 +900,8 @@ static int mxcfb_check_var(struct fb_var_screeninfo *var, struct fb_info *info)
 	if (var->xres_virtual < var->xres)
 		var->xres_virtual = var->xres;
 
-	if (var->yres_virtual < var->yres)
-		var->yres_virtual = var->yres * 3;
+	if (var->yres_virtual <= var->yres)
+		var->yres_virtual = ALIGN_PIXEL_128(var->yres) * 3;
 
 	if ((var->bits_per_pixel != 32) && (var->bits_per_pixel != 24) &&
 	    (var->bits_per_pixel != 16) && (var->bits_per_pixel != 12) &&
@@ -2442,8 +2445,8 @@ static int mxcfb_probe(struct platform_device *pdev)
 
 	ret = ipu_test_set_usage(mxcfbi->ipu_id, mxcfbi->ipu_di);
 	if (ret < 0) {
-		dev_err(&pdev->dev, "ipu%d-di%d already in use\n",
-				mxcfbi->ipu_id, mxcfbi->ipu_di);
+		dev_err(&pdev->dev, "mxcfb%d: ipu%d-di%d already in use\n",
+				pdev->id, mxcfbi->ipu_id, mxcfbi->ipu_di);
 		goto ipu_in_busy;
 	}
 
