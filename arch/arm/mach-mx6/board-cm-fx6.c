@@ -1533,6 +1533,9 @@ static void __init cm_fx6_init(void)
 
 static int __init cm_fx6_init_late(void)
 {
+	if (!machine_is_cm_fx6())
+		return -ENODEV;
+
 	cm_fx6_init_hdmi();
 	cm_fx6_init_display();
 	cm_fx6_init_hdmi_audio();
