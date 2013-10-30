@@ -99,11 +99,14 @@ static iomux_v3_cfg_t cm_fx6_dl_pads[] = {
 	MX6DL_PAD_DISP0_DAT22__IPU1_DISP0_DAT_22,
 	MX6DL_PAD_DISP0_DAT23__IPU1_DISP0_DAT_23,
 
+#if 0
+	/* interfering pads - exclude now, resolve later */
 	/* UART2 */
 	MX6DL_PAD_EIM_D26__UART2_RXD,
 	MX6DL_PAD_EIM_D27__UART2_TXD,
 	MX6DL_PAD_EIM_D28__UART2_RTS,
 	MX6DL_PAD_EIM_D29__UART2_CTS,
+#endif
 
 	/* USB-OTG */
 	MX6DL_PAD_ENET_RX_ER__ANATOP_USBOTG_ID,
