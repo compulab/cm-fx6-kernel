@@ -172,7 +172,7 @@ static iomux_v3_cfg_t cm_fx6_q_spdif_pads[] = {
 static iomux_v3_cfg_t cm_fx6_q_audmux_pads[] = {
 
 	/* AUDMUX */
-	MX6Q_PAD_SD2_CMD__AUDMUX_AUD4_RXC,	/* unused */
+	MX6Q_PAD_SD2_CMD__AUDMUX_AUD4_RXC,
 	MX6Q_PAD_SD2_CLK__AUDMUX_AUD4_RXFS,	/* unused */
 	MX6Q_PAD_SD2_DAT0__AUDMUX_AUD4_RXD,
 	MX6Q_PAD_SD2_DAT1__AUDMUX_AUD4_TXFS,
