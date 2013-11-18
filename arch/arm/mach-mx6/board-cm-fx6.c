@@ -132,110 +132,50 @@ extern char *soc_reg_id;
 extern char *pu_reg_id;
 extern unsigned int system_rev;
 
-enum sd_pad_mode {
-	SD_PAD_MODE_LOW_SPEED,
-	SD_PAD_MODE_MED_SPEED,
-	SD_PAD_MODE_HIGH_SPEED,
-};
-
 static u32 fsl_system_rev(void);
 
-
-static int plt_sd_pad_change(unsigned int index, int clock)
-{
-	/* LOW speed is the default state of SD pads */
-	static enum sd_pad_mode pad_mode = SD_PAD_MODE_LOW_SPEED;
-
-	iomux_v3_cfg_t *sd_pads_200mhz = NULL;
-	iomux_v3_cfg_t *sd_pads_100mhz = NULL;
-	iomux_v3_cfg_t *sd_pads_50mhz = NULL;
-
-	u32 sd_pads_200mhz_cnt;
-	u32 sd_pads_100mhz_cnt;
-	u32 sd_pads_50mhz_cnt;
-
-	switch (index) {
-	case 0:
-		if (cpu_is_mx6q()) {
-			sd_pads_200mhz = mx6q_sd1_200mhz;
-			sd_pads_100mhz = mx6q_sd1_100mhz;
-			sd_pads_50mhz  = mx6q_sd1_50mhz;
-
-			sd_pads_200mhz_cnt = ARRAY_SIZE(mx6q_sd1_200mhz);
-			sd_pads_100mhz_cnt = ARRAY_SIZE(mx6q_sd1_100mhz);
-			sd_pads_50mhz_cnt  = ARRAY_SIZE(mx6q_sd1_50mhz);
-		} else if (cpu_is_mx6dl()) {
-			sd_pads_200mhz = mx6dl_sd1_200mhz;
-			sd_pads_100mhz = mx6dl_sd1_100mhz;
-			sd_pads_50mhz  = mx6dl_sd1_50mhz;
-
-			sd_pads_200mhz_cnt = ARRAY_SIZE(mx6dl_sd1_200mhz);
-			sd_pads_100mhz_cnt = ARRAY_SIZE(mx6dl_sd1_100mhz);
-			sd_pads_50mhz_cnt  = ARRAY_SIZE(mx6dl_sd1_50mhz);
-		}
-	case 2:
-		if (cpu_is_mx6q()) {
-			sd_pads_200mhz = mx6q_sd3_200mhz;
-			sd_pads_100mhz = mx6q_sd3_100mhz;
-			sd_pads_50mhz = mx6q_sd3_50mhz;
-
-			sd_pads_200mhz_cnt = ARRAY_SIZE(mx6q_sd3_200mhz);
-			sd_pads_100mhz_cnt = ARRAY_SIZE(mx6q_sd3_100mhz);
-			sd_pads_50mhz_cnt = ARRAY_SIZE(mx6q_sd3_50mhz);
-		} else if (cpu_is_mx6dl()) {
-			sd_pads_200mhz = mx6dl_sd3_200mhz;
-			sd_pads_100mhz = mx6dl_sd3_100mhz;
-			sd_pads_50mhz = mx6dl_sd3_50mhz;
-
-			sd_pads_200mhz_cnt = ARRAY_SIZE(mx6dl_sd3_200mhz);
-			sd_pads_100mhz_cnt = ARRAY_SIZE(mx6dl_sd3_100mhz);
-			sd_pads_50mhz_cnt = ARRAY_SIZE(mx6dl_sd3_50mhz);
-		}
-		break;
-	default:
-		printk(KERN_ERR "no such SD host controller index %d\n", index);
-		return -EINVAL;
-	}
-
-	if (clock > 100000000) {
-		if (pad_mode == SD_PAD_MODE_HIGH_SPEED)
-			return 0;
-		BUG_ON(!sd_pads_200mhz);
-		pad_mode = SD_PAD_MODE_HIGH_SPEED;
-		return mxc_iomux_v3_setup_multiple_pads(sd_pads_200mhz,
-							sd_pads_200mhz_cnt);
-	} else if (clock > 52000000) {
-		if (pad_mode == SD_PAD_MODE_MED_SPEED)
-			return 0;
-		BUG_ON(!sd_pads_100mhz);
-		pad_mode = SD_PAD_MODE_MED_SPEED;
-		return mxc_iomux_v3_setup_multiple_pads(sd_pads_100mhz,
-							sd_pads_100mhz_cnt);
-	} else {
-		if (pad_mode == SD_PAD_MODE_LOW_SPEED)
-			return 0;
-		BUG_ON(!sd_pads_50mhz);
-		pad_mode = SD_PAD_MODE_LOW_SPEED;
-		return mxc_iomux_v3_setup_multiple_pads(sd_pads_50mhz,
-							sd_pads_50mhz_cnt);
-	}
-}
 
 static const struct esdhc_platform_data cm_fx6_sd1_data = {
 	.always_present         = 1,
 	.keep_power_at_suspend  = 1,
-	.platform_pad_change	= plt_sd_pad_change,
 };
 
 static const struct esdhc_platform_data cm_fx6_sd3_data = {
 	.cd_gpio		= CM_FX6_SD3_CD,
 	.wp_gpio		= CM_FX6_SD3_WP,
-	.support_8bit		= 1,
+	.support_8bit		= 0,
 	.keep_power_at_suspend	= 1,
 	.delay_line		= 0,
-	.platform_pad_change	= plt_sd_pad_change,
 	.cd_type		= ESDHC_CD_GPIO,
 };
+
+static void sb_fx6_sd_init(void)
+{
+	iomux_v3_cfg_t *sd3_pads;
+	unsigned int sd3_pads_cnt;
+	iomux_v3_cfg_t *sd1_pads;
+	unsigned int sd1_pads_cnt;
+
+	if (cpu_is_mx6q()) {
+		sd3_pads = mx6q_sd3_200mhz;
+		sd3_pads_cnt = ARRAY_SIZE(mx6q_sd3_200mhz);
+
+		sd1_pads = mx6q_sd1_200mhz;
+		sd1_pads_cnt = ARRAY_SIZE(mx6q_sd1_200mhz);
+	} else if (cpu_is_mx6dl()) {
+		sd3_pads = mx6dl_sd3_200mhz;
+		sd3_pads_cnt = ARRAY_SIZE(mx6dl_sd3_200mhz);
+
+		sd1_pads = mx6dl_sd1_200mhz;
+		sd1_pads_cnt = ARRAY_SIZE(mx6dl_sd1_200mhz);
+	}
+
+	mxc_iomux_v3_setup_multiple_pads(sd3_pads, sd3_pads_cnt);
+	mxc_iomux_v3_setup_multiple_pads(sd1_pads, sd1_pads_cnt);
+
+	imx6q_add_sdhci_usdhc_imx(2, &cm_fx6_sd3_data);
+	imx6q_add_sdhci_usdhc_imx(0, &cm_fx6_sd1_data);
+}
 
 static int gpmi_nand_platform_init(void)
 {
@@ -1481,8 +1421,7 @@ static void __init cm_fx6_init(void)
 	// imx6_init_fec(fec_data); -- called asynchronously by cm_fx6_id_eeprom_setup()
 
 	imx6q_add_pm_imx(0, &cm_fx6_pm_data);
-	imx6q_add_sdhci_usdhc_imx(2, &cm_fx6_sd3_data);
-	imx6q_add_sdhci_usdhc_imx(0, &cm_fx6_sd1_data);
+	sb_fx6_sd_init();
 	imx_add_viv_gpu(&imx6_gpu_data, &imx6_gpu_pdata);
 	if (cpu_is_mx6q())
 		imx6q_add_ahci(0, &cm_fx6_sata_data);
