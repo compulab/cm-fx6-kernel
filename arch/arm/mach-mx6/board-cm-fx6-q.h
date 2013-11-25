@@ -16,9 +16,21 @@
 
 static iomux_v3_cfg_t cm_fx6_q_pads[] = {
 
-	/* UART4 for debug */
+	/* UART1 */
+	MX6Q_PAD_SD3_DAT7__UART1_TXD,
+	MX6Q_PAD_SD3_DAT6__UART1_RXD,
+
+	/* UART2 */
+	MX6Q_PAD_GPIO_7__UART2_TXD,
+	MX6Q_PAD_GPIO_8__UART2_RXD,
+
+	/* UART4 -- kernel console */
 	MX6Q_PAD_KEY_COL0__UART4_TXD,
 	MX6Q_PAD_KEY_ROW0__UART4_RXD,
+
+	/* UART5 */
+	MX6Q_PAD_KEY_COL1__UART5_TXD,
+	MX6Q_PAD_KEY_ROW1__UART5_RXD,
 
 	/* ENET */
 	MX6Q_PAD_ENET_MDIO__ENET_MDIO,
