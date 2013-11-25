@@ -19,9 +19,21 @@
 
 static iomux_v3_cfg_t cm_fx6_q_pads[] = {
 
-	/* UART4 for debug */
+	/* UART1 */
+	MX6Q_PAD_SD3_DAT7__UART1_TXD,
+	MX6Q_PAD_SD3_DAT6__UART1_RXD,
+
+	/* UART2 */
+	MX6Q_PAD_GPIO_7__UART2_TXD,
+	MX6Q_PAD_GPIO_8__UART2_RXD,
+
+	/* UART4 -- kernel console */
 	MX6Q_PAD_KEY_COL0__UART4_TXD,
 	MX6Q_PAD_KEY_ROW0__UART4_RXD,
+
+	/* UART5 */
+	MX6Q_PAD_KEY_COL1__UART5_TXD,
+	MX6Q_PAD_KEY_ROW1__UART5_RXD,
 
 	/* ENET */
 	MX6Q_PAD_ENET_MDIO__ENET_MDIO,
@@ -98,15 +110,6 @@ static iomux_v3_cfg_t cm_fx6_q_pads[] = {
 	MX6Q_PAD_DISP0_DAT21__IPU1_DISP0_DAT_21,
 	MX6Q_PAD_DISP0_DAT22__IPU1_DISP0_DAT_22,
 	MX6Q_PAD_DISP0_DAT23__IPU1_DISP0_DAT_23,
-
-#if 0
-	/* interfering pads - exclude now, resolve later */
-	/* UART2 */
-	MX6Q_PAD_EIM_D26__UART2_RXD,
-	MX6Q_PAD_EIM_D27__UART2_TXD,
-	MX6Q_PAD_EIM_D28__UART2_RTS,
-	MX6Q_PAD_EIM_D29__UART2_CTS,
-#endif
 
 	/* USB-OTG */
 	MX6Q_PAD_ENET_RX_ER__ANATOP_USBOTG_ID,
