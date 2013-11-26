@@ -125,7 +125,6 @@
 #define MX6_SNVS_LPCR_REG		0x38
 
 static struct clk *sata_clk;
-static int spdif_en;
 static int gpmi_en;
 
 extern char *soc_reg_id;
@@ -1149,14 +1148,6 @@ static void __init cm_fx6_fixup(struct machine_desc *desc, struct tag *tags,
 	}
 }
 
-static int __init early_enable_spdif(char *p)
-{
-	spdif_en = 1;
-	return 0;
-}
-
-early_param("spdif", early_enable_spdif);
-
 static int __init early_enable_gpmi(char *p)
 {
 	gpmi_en = 1;
@@ -1165,6 +1156,7 @@ static int __init early_enable_gpmi(char *p)
 
 early_param("gpmi", early_enable_gpmi);
 
+#ifdef CONFIG_SND_SOC_IMX_SPDIF
 static int spdif_clk_set_rate(struct clk *clk, unsigned long rate)
 {
 	unsigned long rate_actual;
@@ -1192,6 +1184,33 @@ static struct mxc_spdif_platform_data mxc_spdif_data = {
 	.spdif_clk_set_rate	= spdif_clk_set_rate,
 	.spdif_clk		= NULL, /* spdif bus clk */
 };
+
+static void __init cm_fx6_spdif_init(void)
+{
+	iomux_v3_cfg_t *spdif_pads;
+	int spdif_pads_cnt;
+
+	if (cpu_is_mx6q()) {
+		spdif_pads = cm_fx6_q_spdif_pads;
+		spdif_pads_cnt = ARRAY_SIZE(cm_fx6_q_spdif_pads);
+	}
+	else if (cpu_is_mx6dl()) {
+		spdif_pads = cm_fx6_dl_spdif_pads;
+		spdif_pads_cnt = ARRAY_SIZE(cm_fx6_dl_spdif_pads);
+	}
+	mxc_iomux_v3_setup_multiple_pads(spdif_pads, spdif_pads_cnt);
+
+	mxc_spdif_data.spdif_core_clk = clk_get_sys("mxc_spdif.0", NULL);
+	clk_put(mxc_spdif_data.spdif_core_clk);
+	imx6q_add_spdif(&mxc_spdif_data);
+	imx6q_add_spdif_dai();
+	imx6q_add_spdif_audio_device();
+}
+
+#else
+
+static void cm_fx6_spdif_init(void) {}
+#endif	// CONFIG_SND_SOC_IMX_SPDIF
 
 static const struct imx_pcie_platform_data cm_fx6_pcie_data = {
 	.pcie_pwr_en	= CM_FX6_PCIE_PWR_EN,
@@ -1340,10 +1359,7 @@ static void mx6_snvs_poweroff(void)
 static void __init cm_fx6_init(void)
 {
 	iomux_v3_cfg_t *common_pads = NULL;
-	iomux_v3_cfg_t *spdif_pads = NULL;
-
 	int common_pads_cnt;
-	int spdif_pads_cnt;
 
 
 	/* 
@@ -1361,25 +1377,14 @@ static void __init cm_fx6_init(void)
 
 	if (cpu_is_mx6q()) {
 		common_pads = cm_fx6_q_pads;
-		spdif_pads = cm_fx6_q_spdif_pads;
-
 		common_pads_cnt = ARRAY_SIZE(cm_fx6_q_pads);
-		spdif_pads_cnt =  ARRAY_SIZE(cm_fx6_q_spdif_pads);
 	} else if (cpu_is_mx6dl()) {
 		common_pads = cm_fx6_dl_pads;
-		spdif_pads = cm_fx6_dl_spdif_pads;
-
 		common_pads_cnt = ARRAY_SIZE(cm_fx6_dl_pads);
-		spdif_pads_cnt =  ARRAY_SIZE(cm_fx6_dl_spdif_pads);
 	}
 
 	BUG_ON(!common_pads);
 	mxc_iomux_v3_setup_multiple_pads(common_pads, common_pads_cnt);
-
-	if (spdif_en) {
-		BUG_ON(!spdif_pads);
- 		mxc_iomux_v3_setup_multiple_pads(spdif_pads, spdif_pads_cnt);
-	}
 
 	/*
 	 * the following is the common devices support on the shared ARM2 boards
@@ -1445,13 +1450,7 @@ static void __init cm_fx6_init(void)
 
 	cm_fx6_pwm_init();
 
-	if (spdif_en) {
-		mxc_spdif_data.spdif_core_clk = clk_get_sys("mxc_spdif.0", NULL);
-		clk_put(mxc_spdif_data.spdif_core_clk);
-		imx6q_add_spdif(&mxc_spdif_data);
-		imx6q_add_spdif_dai();
-		imx6q_add_spdif_audio_device();
-	}
+	cm_fx6_spdif_init();
 
 	/* can1 can optionally be supported */
 	imx6q_add_flexcan0(NULL);
