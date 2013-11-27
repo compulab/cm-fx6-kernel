@@ -38,6 +38,7 @@ extern struct cpu_op *(*get_cpu_op)(int *op);
 
 extern unsigned long loops_per_jiffy;
 int external_pureg;
+bool initialized = false;
 
 static inline unsigned long mx6_cpu_jiffies(unsigned long old, u_int div,
 					      u_int mult)
@@ -65,6 +66,12 @@ void mx6_cpu_regulator_init(void)
 #ifndef CONFIG_SMP
 	unsigned long old_loops_per_jiffy;
 #endif
+
+	if (initialized)
+		return;
+
+	initialized = true;
+
 	external_pureg = 0;
 	cpu_regulator = regulator_get(NULL, gp_reg_id);
 	if (IS_ERR(cpu_regulator))
