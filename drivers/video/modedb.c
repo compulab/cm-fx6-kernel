@@ -1129,7 +1129,8 @@ void fb_print_modelist(struct list_head *head)
 	list_for_each(pos, head) {
 		modelist = list_entry(pos, struct fb_modelist, list);
 		m = &modelist->mode;
-		printk(KERN_INFO"%2d) %ux%u@%u \n", ++i, m->xres, m->yres, m->pixclock);
+		printk(KERN_INFO"%2d) %ux%u@%u-%u \n", ++i, m->xres, m->yres,
+		       m->refresh, m->pixclock);
 	}
 }
 
