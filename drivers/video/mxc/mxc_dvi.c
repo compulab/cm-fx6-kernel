@@ -113,17 +113,43 @@ static ssize_t mxc_dvi_show_edid(struct device *dev,
 
 static DEVICE_ATTR(edid, S_IRUGO, mxc_dvi_show_edid, NULL);
 
+static bool mxc_dvi_reject_videomode(const struct fb_videomode *mode,
+				     struct list_head *head)
+{
+	struct list_head *pos;
+	struct fb_modelist *modelist;
+	struct fb_videomode *m;
+
+	list_for_each(pos, head) {
+		modelist = list_entry(pos, struct fb_modelist, list);
+		m = &modelist->mode;
+		if ((mode->xres == m->xres) &&
+		    (mode->yres == m->yres) &&
+		    (mode->refresh == m->refresh)) {
+
+			return true;
+		}
+	}
+
+	return false;
+}
+
 /* 
  * Create modelist based on EDID information.
+ * Add to the modelist only CEA video modes, and non-CEA modes
+ * that have no matching CEA mode.
  */
 static void mxc_dvi_edid_rebuild_modelist(struct mxc_dvi_data *dvi)
 {
 	int i;
 	struct fb_videomode *mode;
+	struct list_head cea_modelist;
 
 	dev_dbg(&dvi->pdev->dev, "%s\n", __func__);
 
 	fb_destroy_modelist(&dvi->fbi->modelist);
+
+	INIT_LIST_HEAD(&cea_modelist);
 
 	/* 
 	 * FIXME:
@@ -131,10 +157,24 @@ static void mxc_dvi_edid_rebuild_modelist(struct mxc_dvi_data *dvi)
 	 */
 	for (i = 0; i < dvi->fbi->monspecs.modedb_len; i++) {
 		mode = &dvi->fbi->monspecs.modedb[i];
-		if (!(mode->vmode & FB_VMODE_INTERLACED)) {
+		if (!(mode->vmode & FB_VMODE_INTERLACED)
+		    && (mxc_edid_mode_to_vic(mode) != 0)) {
+
+			fb_add_videomode(mode, &dvi->fbi->modelist);
+			fb_add_videomode(mode, &cea_modelist);
+		}
+	}
+	for (i = 0; i < dvi->fbi->monspecs.modedb_len; i++) {
+		mode = &dvi->fbi->monspecs.modedb[i];
+		if (!(mode->vmode & FB_VMODE_INTERLACED)
+		    && (mxc_edid_mode_to_vic(mode) == 0)
+		    && !mxc_dvi_reject_videomode(mode, &cea_modelist)) {
+
 			fb_add_videomode(mode, &dvi->fbi->modelist);
 		}
 	}
+
+	fb_destroy_modelist(&cea_modelist);
 
 	pr_info("MXC dvi: rebuild EDID modelist: \n");
 	fb_print_modelist(&dvi->fbi->modelist);
