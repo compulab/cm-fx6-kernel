@@ -142,6 +142,9 @@ static iomux_v3_cfg_t cm_fx6_dl_pads[] = {
 	/* Wlan */
 	MX6DL_PAD_GPIO_17__GPIO_7_12,	/* WiFi nPD */
 	MX6DL_PAD_NANDF_CS3__GPIO_6_16,	/* WiFi nRESET */
+
+	/* SB-FX6m: EM3027 RTC IRQ */
+	MX6DL_PAD_GPIO_1__GPIO_1_1,
 };
 
 static iomux_v3_cfg_t cm_fx6_dl_spdif_pads[] = {
