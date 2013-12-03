@@ -48,6 +48,7 @@
 #include <linux/gpio-i2cmux.h>
 #include <linux/spi/scf0403.h>
 #include <linux/spi/ads7846.h>
+#include <linux/rtc/rtc-em3027.h>
 
 #include <mach/common.h>
 #include <mach/hardware.h>
@@ -75,6 +76,7 @@
 
 /* GPIO PIN, sort by PORT/BIT */
 #define CM_FX6_USBH1_PWR		IMX_GPIO_NR(1, 0)
+#define SB_FX6m_EM3027_IRQ		IMX_GPIO_NR(1, 1)
 #define SB_FX6_DVI_DDC_SEL		IMX_GPIO_NR(1, 2)
 #define SB_FX6_HIMAX_PENDOWN		IMX_GPIO_NR(1, 4)
 #define SB_FX6m_DVI_HPD			IMX_GPIO_NR(1, 4)
@@ -128,6 +130,7 @@ extern char *pu_reg_id;
 static void fsl_system_rev(void);
 static void sb_fx6_gpio_expander_register(void);
 static void sb_fx6_touchscreen_himax_register(void);
+static void sb_fx6m_rtc_register(void);
 
 static const struct esdhc_platform_data cm_fx6_sd1_data __initconst = {
 	.always_present         = 1,
@@ -456,6 +459,8 @@ static void __init sb_fx6_init(void)
 	sb_fx6_touchscreen_himax_register();
 	dvi_hpd_gpio = SB_FX6_DVI_HPD;
 
+	/* i.mx6 rtc */
+	imx6q_add_imx_snvs_rtc();
 	/* i.mx6 power key */
 	imx6q_add_imx_snvs_pwrkey();
 }
@@ -465,6 +470,9 @@ static void __init sb_fx6m_init(void)
 	pr_info("CM-FX6: set up SB-FX6m - Utilite device \n");
 
 	dvi_hpd_gpio = SB_FX6m_DVI_HPD;
+
+	/* em3027 rtc */
+	sb_fx6m_rtc_register();
 }
 
 static void eeprom_read_mac_address(struct memory_accessor *ma, unsigned char *mac)
@@ -656,6 +664,37 @@ early_param("dvi-no-edid", dvi_set_dummy_i2c_addr);
 #else
 
 static void sb_fx6_dvi_register(void) {}
+#endif
+
+#ifdef CONFIG_RTC_DRV_EM3027
+static struct em3027_platform_data sb_fx6m_rtc = {
+	.charger_resistor_sel = EM3027_TRICKLE_CHARGER_1_5K,
+};
+
+static struct i2c_board_info sb_fx6m_rtc_info = {
+	/* em3027 RTC */
+	I2C_BOARD_INFO("em3027", 0x56),
+	.irq = gpio_to_irq(SB_FX6m_EM3027_IRQ),
+	.platform_data = &sb_fx6m_rtc,
+};
+
+static void sb_fx6m_rtc_register(void)
+{
+	int err;
+
+	err = gpio_request_one(SB_FX6m_EM3027_IRQ, GPIOF_DIR_IN, "rtc irq");
+	if (err) {
+		pr_err("em3027: could not request gpio %d \n",
+		       SB_FX6m_EM3027_IRQ);
+		return;
+	}
+
+	cm_fx6_i2c_device_register(3, &sb_fx6m_rtc_info, "em3027 rtc");
+}
+
+#else
+
+static void sb_fx6m_rtc_register(void) {}
 #endif
 
 
@@ -1570,8 +1609,6 @@ static void __init cm_fx6_init(void)
 	cm_fx6_init_uart();
 
 	cm_fx6_init_ipu();
-
-	imx6q_add_imx_snvs_rtc();
 
 	imx6q_add_imx_caam();
 
