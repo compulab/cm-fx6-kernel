@@ -1486,15 +1486,17 @@ static void cm_fx6_adjust_cpu_op(void)
 	struct cpu_op *op;
 	int num;
 
-	op = mx6_get_cpu_op(&num);
-	if (!op)
-		return;
+	if (cpu_is_mx6q()) {
+		op = mx6_get_cpu_op(&num);
+		if (!op)
+			return;
 
-	while (--num >= 0) {
-		if (op[num].soc_voltage < CM_FX6_MIN_SOC_VOLTAGE)
-			op[num].soc_voltage = CM_FX6_MIN_SOC_VOLTAGE;
-		if (op[num].pu_voltage < CM_FX6_MIN_PU_VOLTAGE)
-			op[num].pu_voltage = CM_FX6_MIN_PU_VOLTAGE;
+		while (--num >= 0) {
+			if (op[num].soc_voltage < CM_FX6_MIN_SOC_VOLTAGE)
+				op[num].soc_voltage = CM_FX6_MIN_SOC_VOLTAGE;
+			if (op[num].pu_voltage < CM_FX6_MIN_PU_VOLTAGE)
+				op[num].pu_voltage = CM_FX6_MIN_PU_VOLTAGE;
+		}
 	}
 }
 
