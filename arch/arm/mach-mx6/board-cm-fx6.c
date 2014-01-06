@@ -1669,18 +1669,28 @@ static void __init cm_fx6_init(void)
 	imx6q_add_busfreq();
 }
 
+static resource_size_t cm_fx6_v4l_msize = SZ_64M;
+
+static int __init cm_fx6_v4l_setup(char *arg)
+{
+	cm_fx6_v4l_msize = memparse(arg, NULL);
+
+	return 0;
+}
+early_param("cm_fx6_v4l_msize", cm_fx6_v4l_setup);
+
 static int __init cm_fx6_init_v4l(void)
 {
 	struct platform_device *voutdev;
-
-	resource_size_t res_mbase;
-	resource_size_t res_msize = SZ_128M;
+	phys_addr_t phys;
+	resource_size_t res_mbase = 0;
+	resource_size_t res_msize = cm_fx6_v4l_msize;
 
 	if (res_msize) {
-		phys_addr_t phys = memblock_alloc_base(res_msize, SZ_4K, SZ_1G);
+		pr_info("%s: allocate: %u bytes \n", __func__, res_msize);
+		phys = memblock_alloc_base(res_msize, SZ_4K, SZ_1G);
 		if (!phys) {
-			pr_err("%s: memblock_alloc_base(%lx) failed \n",
-				   __func__, (unsigned long)res_msize);
+			pr_err("%s: memblock_alloc_base() failed \n", __func__);
 			return 0;
 		}
 		memblock_remove(phys, res_msize);
