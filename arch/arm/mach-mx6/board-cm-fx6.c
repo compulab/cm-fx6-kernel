@@ -752,7 +752,7 @@ static int cm_fx6_sata_init(struct device *dev, void __iomem *addr)
 	 *.tx_edgerate_0(iomuxc_gpr13[0]),
 	 */
 	tmpdata = readl(IOMUXC_GPR13);
-	tmpdata &= ~0x07FFFFFD;
+	tmpdata &= ~0x07FFFFFF;
 	tmpdata |= 0x0593A4C4;		// 3.0 Gbps
 	// tmpdata |= 0x059324C4;	// 1.5 Gbps
 	writel(tmpdata, IOMUXC_GPR13);
