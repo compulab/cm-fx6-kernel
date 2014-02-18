@@ -109,6 +109,8 @@ struct ads7846 {
 	u16			pressure_max;
 
 	bool			swap_xy;
+	u16			reverse_x;
+	u16			reverse_y;
 	bool			use_internal;
 
 	struct ads7846_packet	*packet;
@@ -847,6 +849,10 @@ static void ads7846_report_state(struct ads7846 *ts)
 
 		if (ts->swap_xy)
 			swap(x, y);
+		if (ts->reverse_x)
+			x = ts->reverse_x - x;
+		if (ts->reverse_y)
+			y = ts->reverse_y - y;
 
 		if (!ts->pendown) {
 			input_report_key(input, BTN_TOUCH, 1);
@@ -1245,6 +1251,10 @@ static int __devinit ads7846_probe(struct spi_device *spi)
 	ts->input = input_dev;
 	ts->vref_mv = pdata->vref_mv;
 	ts->swap_xy = pdata->swap_xy;
+	if (pdata->reverse_x)
+		ts->reverse_x = pdata->x_min + pdata->x_max;
+	if (pdata->reverse_y)
+		ts->reverse_y = pdata->y_min + pdata->y_max;
 
 	mutex_init(&ts->lock);
 	init_waitqueue_head(&ts->wait);
