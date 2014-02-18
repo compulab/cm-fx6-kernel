@@ -320,17 +320,20 @@ static struct flash_platform_data cm_fx6_spi_flash_data = {
 };
 #endif
 
-#ifdef CONFIG_TOUCHSCREEN_ADS7846
+#if (defined CONFIG_TOUCHSCREEN_ADS7846) || (defined CONFIG_TOUCHSCREEN_ADS7846_MODULE)
 static struct ads7846_platform_data ads7846_config = {
-	.x_max			= 0x0fff,
-	.y_max			= 0x0fff,
+	.x_min			= 0x10a0,
+	.x_max			= 0x1ef0,
+	.y_min			= 0x1100,
+	.y_max			= 0x1ef0,
+	.reverse_y		= true,
 	.x_plate_ohms		= 180,
 	.pressure_max		= 255,
 	.debounce_max		= 30,
 	.debounce_tol		= 10,
 	.debounce_rep		= 1,
 	.gpio_pendown		= CM_FX6_ADS7846_PENDOWN,
-	.keep_vref_on		= 1,
+	.keep_vref_on		= true,
 };
 #endif
 
@@ -349,7 +352,7 @@ static struct spi_board_info cm_fx6_spi0_board_info[] = {
 		.platform_data	= &cm_fx6_spi_flash_data,
 	},
 #endif
-#ifdef CONFIG_TOUCHSCREEN_ADS7846
+#if (defined CONFIG_TOUCHSCREEN_ADS7846) || (defined CONFIG_TOUCHSCREEN_ADS7846_MODULE)
 	{
 		.modalias	= "ads7846",
 		.max_speed_hz	= 1500000,
@@ -825,11 +828,14 @@ static struct ipuv3_fb_platform_data cm_fx6_fb_data[] = {
 	.default_bpp		= 24,
 	.int_clk		= false,
 	}, {
+	/* Startek 800x480 LCD */
 	.disp_dev		= "lcd",
-	.interface_pix_fmt	= IPU_PIX_FMT_RGB666,
-	.mode_str		= "SCF04-WVGA",
+	.interface_pix_fmt	= IPU_PIX_FMT_RGB24,
+	.mode_str		= "KD050C-WVGA",
+	.default_bpp		= 24,
 	.int_clk		= false,
 	},
+
 };
 
 static void hdmi_init(int ipu_id, int disp_id)
