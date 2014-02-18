@@ -40,7 +40,7 @@ static struct fb_videomode lcdif_modedb[] = {
 	FB_VMODE_NONINTERLACED,
 	0,},
 	{
-	/* 480x800 @ 60 Hz , pixel clk @ 25MHz */
+	/* Dataimage: 480x800 @ 60 Hz , pixel clk @ 25MHz */
 		.name		= "SCF04-WVGA",
 		.xres		= 480,
 		.yres		= 800,
@@ -51,6 +51,20 @@ static struct fb_videomode lcdif_modedb[] = {
 		.lower_margin	= 10,
 		.hsync_len	= 1,
 		.vsync_len	= 10,
+		.vmode		= FB_VMODE_NONINTERLACED,
+	},
+	{
+	/* Startek: 800x480 @ 60 Hz , pixel clk @ 33MHz */
+		.name		= "KD050C-WVGA",
+		.xres		= 800,
+		.yres		= 480,
+		.pixclock	= 30000,
+		.left_margin	= 40,
+		.right_margin	= 40,
+		.upper_margin	= 13,
+		.lower_margin	= 29,
+		.hsync_len	= 48,
+		.vsync_len	= 3,
 		.vmode		= FB_VMODE_NONINTERLACED,
 	},
 };
