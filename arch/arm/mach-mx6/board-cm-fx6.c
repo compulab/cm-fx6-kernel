@@ -76,8 +76,8 @@
 #define CM_FX6_ECSPI1_CS1		IMX_GPIO_NR(3, 19)
 #define CM_FX6_USB_OTG_PWR		IMX_GPIO_NR(3, 22)
 #define CM_FX6_CAN2_EN			IMX_GPIO_NR(5, 24)
-#define CM_FX6_SD3_CD			IMX_GPIO_NR(6, 11)
-#define CM_FX6_SD3_WP			IMX_GPIO_NR(6, 14)
+#define SB_FX6_SD3_WP			IMX_GPIO_NR(7, 0)
+#define SB_FX6_SD3_CD			IMX_GPIO_NR(7, 1)
 #define CM_FX6_CAN1_STBY		IMX_GPIO_NR(7, 12)
 #define CM_FX6_CAN1_EN			IMX_GPIO_NR(7, 13)
 #define CM_FX6_MAX7310_1_BASE_ADDR	IMX_GPIO_NR(8, 0)
@@ -106,83 +106,32 @@ static int flexcan_en;
 extern char *soc_reg_id;
 extern char *pu_reg_id;
 
-enum sd_pad_mode {
-	SD_PAD_MODE_LOW_SPEED,
-	SD_PAD_MODE_MED_SPEED,
-	SD_PAD_MODE_HIGH_SPEED,
-};
-
-static int plt_sd_pad_change(unsigned int index, int clock)
-{
-	/* LOW speed is the default state of SD pads */
-	static enum sd_pad_mode pad_mode = SD_PAD_MODE_LOW_SPEED;
-
-	iomux_v3_cfg_t *sd_pads_200mhz = NULL;
-	iomux_v3_cfg_t *sd_pads_100mhz = NULL;
-	iomux_v3_cfg_t *sd_pads_50mhz = NULL;
-
-	u32 sd_pads_200mhz_cnt;
-	u32 sd_pads_100mhz_cnt;
-	u32 sd_pads_50mhz_cnt;
-
-	switch (index) {
-	case 2:
-		if (cpu_is_mx6q()) {
-			sd_pads_200mhz = mx6q_sd3_200mhz;
-			sd_pads_100mhz = mx6q_sd3_100mhz;
-			sd_pads_50mhz = mx6q_sd3_50mhz;
-
-			sd_pads_200mhz_cnt = ARRAY_SIZE(mx6q_sd3_200mhz);
-			sd_pads_100mhz_cnt = ARRAY_SIZE(mx6q_sd3_100mhz);
-			sd_pads_50mhz_cnt = ARRAY_SIZE(mx6q_sd3_50mhz);
-		} else if (cpu_is_mx6dl()) {
-			sd_pads_200mhz = mx6dl_sd3_200mhz;
-			sd_pads_100mhz = mx6dl_sd3_100mhz;
-			sd_pads_50mhz = mx6dl_sd3_50mhz;
-
-			sd_pads_200mhz_cnt = ARRAY_SIZE(mx6dl_sd3_200mhz);
-			sd_pads_100mhz_cnt = ARRAY_SIZE(mx6dl_sd3_100mhz);
-			sd_pads_50mhz_cnt = ARRAY_SIZE(mx6dl_sd3_50mhz);
-		}
-		break;
-	default:
-		printk(KERN_ERR "no such SD host controller index %d\n", index);
-		return -EINVAL;
-	}
-
-	if (clock > 100000000) {
-		if (pad_mode == SD_PAD_MODE_HIGH_SPEED)
-			return 0;
-		BUG_ON(!sd_pads_200mhz);
-		pad_mode = SD_PAD_MODE_HIGH_SPEED;
-		return mxc_iomux_v3_setup_multiple_pads(sd_pads_200mhz,
-							sd_pads_200mhz_cnt);
-	} else if (clock > 52000000) {
-		if (pad_mode == SD_PAD_MODE_MED_SPEED)
-			return 0;
-		BUG_ON(!sd_pads_100mhz);
-		pad_mode = SD_PAD_MODE_MED_SPEED;
-		return mxc_iomux_v3_setup_multiple_pads(sd_pads_100mhz,
-							sd_pads_100mhz_cnt);
-	} else {
-		if (pad_mode == SD_PAD_MODE_LOW_SPEED)
-			return 0;
-		BUG_ON(!sd_pads_50mhz);
-		pad_mode = SD_PAD_MODE_LOW_SPEED;
-		return mxc_iomux_v3_setup_multiple_pads(sd_pads_50mhz,
-							sd_pads_50mhz_cnt);
-	}
-}
-
 static const struct esdhc_platform_data cm_fx6_sd3_data __initconst = {
-	.cd_gpio		= CM_FX6_SD3_CD,
-	.wp_gpio		= CM_FX6_SD3_WP,
-	.support_18v		= 1,
-	.support_8bit		= 1,
+	.cd_gpio		= SB_FX6_SD3_CD,
+	.wp_gpio		= SB_FX6_SD3_WP,
+	.cd_type		= ESDHC_CD_GPIO,
+	.always_present		= 0,	/* ! */
 	.keep_power_at_suspend	= 1,
 	.delay_line		= 0,
-	.platform_pad_change	= plt_sd_pad_change,
 };
+
+static void sb_fx6_sd_init(void)
+{
+	iomux_v3_cfg_t *sd3_pads = NULL;
+	unsigned int sd3_pads_cnt = 0;
+
+	if (cpu_is_mx6q()) {
+		sd3_pads = mx6q_sd3_200mhz;
+		sd3_pads_cnt = ARRAY_SIZE(mx6q_sd3_200mhz);
+	} else if (cpu_is_mx6dl()) {
+		sd3_pads = mx6dl_sd3_200mhz;
+		sd3_pads_cnt = ARRAY_SIZE(mx6dl_sd3_200mhz);
+	}
+
+	mxc_iomux_v3_setup_multiple_pads(sd3_pads, sd3_pads_cnt);
+
+	imx6q_add_sdhci_usdhc_imx(2, &cm_fx6_sd3_data);
+}
 
 static int __init gpmi_nand_platform_init(void)
 {
@@ -990,7 +939,7 @@ static void __init cm_fx6_init(void)
 	imx6_init_fec(fec_data);
 
 	imx6q_add_pm_imx(0, &cm_fx6_pm_data);
-	imx6q_add_sdhci_usdhc_imx(2, &cm_fx6_sd3_data);
+	sb_fx6_sd_init();
 	imx_add_viv_gpu(&imx6_gpu_data, &imx6_gpu_pdata);
 	if (cpu_is_mx6q()) {
 #ifdef CONFIG_SATA_AHCI_PLATFORM
