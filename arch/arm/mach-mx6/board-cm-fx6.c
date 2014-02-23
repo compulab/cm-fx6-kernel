@@ -106,6 +106,11 @@ static int flexcan_en;
 extern char *soc_reg_id;
 extern char *pu_reg_id;
 
+static const struct esdhc_platform_data cm_fx6_sd1_data __initconst = {
+	.always_present         = 1,
+	.keep_power_at_suspend  = 1,
+};
+
 static const struct esdhc_platform_data cm_fx6_sd3_data __initconst = {
 	.cd_gpio		= SB_FX6_SD3_CD,
 	.wp_gpio		= SB_FX6_SD3_WP,
@@ -119,18 +124,28 @@ static void sb_fx6_sd_init(void)
 {
 	iomux_v3_cfg_t *sd3_pads = NULL;
 	unsigned int sd3_pads_cnt = 0;
+	iomux_v3_cfg_t *sd1_pads = NULL;
+	unsigned int sd1_pads_cnt = 0;
 
 	if (cpu_is_mx6q()) {
 		sd3_pads = mx6q_sd3_200mhz;
 		sd3_pads_cnt = ARRAY_SIZE(mx6q_sd3_200mhz);
+
+		sd1_pads = mx6q_sd1_200mhz;
+		sd1_pads_cnt = ARRAY_SIZE(mx6q_sd1_200mhz);
 	} else if (cpu_is_mx6dl()) {
 		sd3_pads = mx6dl_sd3_200mhz;
 		sd3_pads_cnt = ARRAY_SIZE(mx6dl_sd3_200mhz);
+
+		sd1_pads = mx6dl_sd1_200mhz;
+		sd1_pads_cnt = ARRAY_SIZE(mx6dl_sd1_200mhz);
 	}
 
 	mxc_iomux_v3_setup_multiple_pads(sd3_pads, sd3_pads_cnt);
+	mxc_iomux_v3_setup_multiple_pads(sd1_pads, sd1_pads_cnt);
 
 	imx6q_add_sdhci_usdhc_imx(2, &cm_fx6_sd3_data);
+	imx6q_add_sdhci_usdhc_imx(0, &cm_fx6_sd1_data);
 }
 
 static int __init gpmi_nand_platform_init(void)
