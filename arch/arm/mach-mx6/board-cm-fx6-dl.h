@@ -164,6 +164,7 @@ static iomux_v3_cfg_t mx6dl_sd##id##_##speed##mhz[] = {		\
 }
 
 MX6DL_USDHC_PAD_SETTING_HALF(3, 200);	/* SD3 */
+MX6DL_USDHC_PAD_SETTING_HALF(1, 200);	/* SD1 */
 
 /* The GPMI is conflicted with SD3, so init this in the driver. */
 static iomux_v3_cfg_t mx6dl_gpmi_nand[] __initdata = {
