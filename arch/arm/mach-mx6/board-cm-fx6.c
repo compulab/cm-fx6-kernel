@@ -76,6 +76,8 @@
 #define CM_FX6_GREEN_LED		IMX_GPIO_NR(2, 31)
 #define CM_FX6_ECSPI1_CS1		IMX_GPIO_NR(3, 19)
 #define CM_FX6_USB_OTG_PWR		IMX_GPIO_NR(3, 22)
+#define CM_FX6_ECSPI2_CS2		IMX_GPIO_NR(3, 24)
+#define CM_FX6_ECSPI2_CS3		IMX_GPIO_NR(3, 25)
 #define CM_FX6_CAN2_EN			IMX_GPIO_NR(5, 24)
 #define SB_FX6_SD3_WP			IMX_GPIO_NR(7, 0)
 #define SB_FX6_SD3_CD			IMX_GPIO_NR(7, 1)
@@ -260,14 +262,24 @@ static struct fec_platform_data fec_data __initdata = {
 	.gpio_irq		= -1,
 };
 
-static int cm_fx6_spi_cs[] = {
+static int cm_fx6_spi0_cs[] = {
 	CM_FX6_ECSPI1_CS0,
 	CM_FX6_ECSPI1_CS1,
 };
 
-static const struct spi_imx_master cm_fx6_spi_data __initconst = {
-	.chipselect     = cm_fx6_spi_cs,
-	.num_chipselect = ARRAY_SIZE(cm_fx6_spi_cs),
+static int cm_fx6_spi1_cs[] = {
+	CM_FX6_ECSPI2_CS2,
+	CM_FX6_ECSPI2_CS3,
+};
+
+static const struct spi_imx_master cm_fx6_spi0_data __initconst = {
+	.chipselect     = cm_fx6_spi0_cs,
+	.num_chipselect = ARRAY_SIZE(cm_fx6_spi0_cs),
+};
+
+static const struct spi_imx_master cm_fx6_spi1_data __initconst = {
+	.chipselect     = cm_fx6_spi1_cs,
+	.num_chipselect = ARRAY_SIZE(cm_fx6_spi1_cs),
 };
 
 #if defined(CONFIG_MTD_M25P80) || defined(CONFIG_MTD_M25P80_MODULE)
@@ -291,7 +303,7 @@ static struct flash_platform_data m25p32_spi_flash_data = {
 };
 #endif
 
-static struct spi_board_info m25p32_spi0_board_info[] __initdata = {
+static struct spi_board_info cm_fx6_spi0_board_info[] = {
 #if defined(CONFIG_MTD_M25P80)
 	{
 		/* The modalias must be the same as spi device driver name */
@@ -304,10 +316,19 @@ static struct spi_board_info m25p32_spi0_board_info[] __initdata = {
 #endif
 };
 
-static void spi_device_init(void)
+static struct spi_board_info cm_fx6_spi1_board_info[] = {
+	/* FIXME */
+};
+
+static void cm_fx6_init_spi(void)
 {
-	spi_register_board_info(m25p32_spi0_board_info,
-				ARRAY_SIZE(m25p32_spi0_board_info));
+	imx6q_add_ecspi(0, &cm_fx6_spi0_data);
+	imx6q_add_ecspi(1, &cm_fx6_spi1_data);
+
+	spi_register_board_info(cm_fx6_spi0_board_info,
+				ARRAY_SIZE(cm_fx6_spi0_board_info));
+	spi_register_board_info(cm_fx6_spi1_board_info,
+				ARRAY_SIZE(cm_fx6_spi1_board_info));
 }
 
 static int max7310_1_setup(struct i2c_client *client,
@@ -962,10 +983,7 @@ static void __init cm_fx6_init(void)
 		imx6q_add_imx_i2c(3, &cm_fx6_i2c_data);
 
 	cm_fx6_init_led();
-
-	/* SPI */
-	imx6q_add_ecspi(0, &cm_fx6_spi_data);
-	spi_device_init();
+	cm_fx6_init_spi();
 
 	imx6q_add_mxc_hdmi(&hdmi_data);
 
