@@ -112,6 +112,8 @@
 
 #define BMCR_PDOWN			0x0800 /* PHY Powerdown */
 #define EEPROM_1ST_MAC_OFF		4
+#define EEPROM_BOARD_NAME_OFF           128
+#define EEPROM_BOARD_NAME_LEN           16
 
 static struct clk *sata_clk;
 static int spdif_en;
@@ -356,7 +358,7 @@ static void eeprom_read_mac_address(struct memory_accessor *ma, unsigned char *m
 
 	err = ma->read(ma, mac, EEPROM_1ST_MAC_OFF, ETH_ALEN);
 	if (err < ETH_ALEN) {
-		pr_warn("cm-fx6: could not read ID EEPROM: %d \n", err);
+		pr_warn("%s: could not read MAC address: %d \n", __func__, err);
 		memset(mac, 0, ETH_ALEN);
 	}
 }
@@ -367,6 +369,23 @@ static void cm_fx6_id_eeprom_setup(struct memory_accessor *ma, void *context)
 	imx6_init_fec(fec_data);
 }
 
+static void sb_fx6_id_eeprom_setup(struct memory_accessor *ma, void *context)
+{
+	char baseboard[EEPROM_BOARD_NAME_LEN];
+	int err;
+
+	/* read base-board ID */
+	err = ma->read(ma, baseboard, EEPROM_BOARD_NAME_OFF,
+		       EEPROM_BOARD_NAME_LEN);
+	if (err < 0) {
+		pr_warn("%s: could not read base-board ID: %d \n",
+			__func__, err);
+		memcpy(baseboard, "undefined", 10);
+	}
+	baseboard[EEPROM_BOARD_NAME_LEN - 1] = '\0';
+	pr_info("CM-FX6: start on %s board \n", baseboard);
+}
+
 static struct at24_platform_data cm_fx6_id_eeprom_data = {
 	.byte_len	= 256,
 	.page_size	= 16,
@@ -375,11 +394,11 @@ static struct at24_platform_data cm_fx6_id_eeprom_data = {
 	.context	= NULL,
 };
 
-static struct at24_platform_data eeprom_24c02 = {
+static struct at24_platform_data sb_fx6_id_eeprom_data = {
 	.byte_len	= 256,
 	.page_size	= 16,
 	.flags		= AT24_FLAG_IRUGO,
-	.setup		= NULL,
+	.setup		= sb_fx6_id_eeprom_setup,
 	.context	= NULL,
 };
 
@@ -427,7 +446,7 @@ static struct i2c_board_info mxc_i2c0_board_info[] __initdata = {
 	{
 		/* EEPROM on the base board: 24c02 */
 		I2C_BOARD_INFO("24c02", 0x50),
-		.platform_data = &eeprom_24c02,
+		.platform_data = &sb_fx6_id_eeprom_data,
 	},
 #endif
 };
