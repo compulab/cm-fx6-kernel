@@ -140,7 +140,7 @@ int sata_phy_cr_read(u32 *data, void __iomem *mmio)
 int sata_init(void __iomem *addr, unsigned long timer1ms)
 {
 	u32 tmpdata;
-	int iterations = 20;
+	int iterations = 500;
 
 	/*
 	 * Make sure that SATA PHY is enabled
