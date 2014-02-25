@@ -441,16 +441,13 @@ static struct viv_gpu_platform_data imx6_gpu_pdata __initdata = {
 	.reserved_mem_size = SZ_128M + SZ_64M,
 };
 
+#ifdef CONFIG_SATA_AHCI_PLATFORM
 /* HW Initialization, if return 0, initialization is successful. */
 static int cm_fx6_sata_init(struct device *dev, void __iomem *addr)
 {
 	u32 tmpdata;
 	int ret = 0;
 	struct clk *clk;
-
-	/* Enable SATA PWR CTRL_0 of MAX7310 */
-	gpio_request(CM_FX6_MAX7310_1_BASE_ADDR, "SATA_PWR_EN");
-	gpio_direction_output(CM_FX6_MAX7310_1_BASE_ADDR, 1);
 
 	sata_clk = clk_get(dev, "imx_sata_clk");
 	if (IS_ERR(sata_clk)) {
@@ -478,11 +475,15 @@ static int cm_fx6_sata_init(struct device *dev, void __iomem *addr)
 	 *.tx_edgerate_0(iomuxc_gpr13[0]),
 	 */
 	tmpdata = readl(IOMUXC_GPR13);
-	writel(((tmpdata & ~0x07FFFFFD) | 0x0593A044), IOMUXC_GPR13);
+	tmpdata &= ~0x07FFFFFD;
+	tmpdata |= 0x0593A4C4;		// 3.0 Gbps
+	// tmpdata |= 0x059324C4;	// 1.5 Gbps
+	writel(tmpdata, IOMUXC_GPR13);
 
 	/* enable SATA_PHY PLL */
 	tmpdata = readl(IOMUXC_GPR13);
-	writel(((tmpdata & ~0x2) | 0x2), IOMUXC_GPR13);
+	tmpdata |= 0x2;
+	writel(tmpdata, IOMUXC_GPR13);
 
 	/* Get the AHB clock rate, and configure the TIMER1MS reg later */
 	clk = clk_get(NULL, "ahb");
@@ -494,18 +495,9 @@ static int cm_fx6_sata_init(struct device *dev, void __iomem *addr)
 	tmpdata = clk_get_rate(clk) / 1000;
 	clk_put(clk);
 
-#ifdef CONFIG_SATA_AHCI_PLATFORM
 	ret = sata_init(addr, tmpdata);
 	if (ret == 0)
 		return ret;
-#else
-	usleep_range(1000, 2000);
-	/* AHCI PHY enter into PDDQ mode if the AHCI module is not enabled */
-	tmpdata = readl(addr + PORT_PHY_CTL);
-	writel(tmpdata | PORT_PHY_CTL_PDDQ_LOC, addr + PORT_PHY_CTL);
-	pr_info("No AHCI save PWR: PDDQ %s\n", ((readl(addr + PORT_PHY_CTL)
-					>> 20) & 1) ? "enabled" : "disabled");
-#endif
 
 release_sata_clk:
 	/* disable SATA_PHY PLL */
@@ -513,29 +505,42 @@ release_sata_clk:
 	clk_disable(sata_clk);
 put_sata_clk:
 	clk_put(sata_clk);
-	/* Disable SATA PWR CTRL_0 of MAX7310 */
-	gpio_request(CM_FX6_MAX7310_1_BASE_ADDR, "SATA_PWR_EN");
-	gpio_direction_output(CM_FX6_MAX7310_1_BASE_ADDR, 0);
 
+	dev_err(dev, "disable SATA controller \n");
 	return ret;
 }
 
-#ifdef CONFIG_SATA_AHCI_PLATFORM
 static void cm_fx6_sata_exit(struct device *dev)
 {
 	clk_disable(sata_clk);
 	clk_put(sata_clk);
-
-	/* Disable SATA PWR CTRL_0 of MAX7310 */
-	gpio_request(CM_FX6_MAX7310_1_BASE_ADDR, "SATA_PWR_EN");
-	gpio_direction_output(CM_FX6_MAX7310_1_BASE_ADDR, 0);
-
 }
 
 static struct ahci_platform_data cm_fx6_sata_data = {
 	.init	= cm_fx6_sata_init,
 	.exit	= cm_fx6_sata_exit,
 };
+
+static void __init cm_fx6_init_sata(void)
+{
+	imx6q_add_ahci(0, &cm_fx6_sata_data);
+}
+
+#else
+
+/*
+ * When SATA is not enabled, disable AHCI phy by inserting it into PDDQ mode.
+ */
+static void __init cm_fx6_init_sata(void)
+{
+	void __iomem *addr = (void __iomem *)ioremap(MX6Q_SATA_BASE_ADDR, SZ_4K);
+	u32 tmpdata;
+
+	tmpdata = readl(addr + PORT_PHY_CTL);
+	writel(tmpdata | PORT_PHY_CTL_PDDQ_LOC, addr + PORT_PHY_CTL);
+	pr_info("No AHCI configured. Save power. PDDQ: %s \n",
+		((readl(addr + PORT_PHY_CTL) >> 20) & 1) ? "enabled" : "disabled");
+}
 #endif
 
 static struct imx_asrc_platform_data imx_asrc_data = {
@@ -994,12 +999,7 @@ static void __init cm_fx6_init(void)
 	sb_fx6_sd_init();
 	imx_add_viv_gpu(&imx6_gpu_data, &imx6_gpu_pdata);
 	if (cpu_is_mx6q()) {
-#ifdef CONFIG_SATA_AHCI_PLATFORM
-		imx6q_add_ahci(0, &cm_fx6_sata_data);
-#else
-		cm_fx6_sata_init(NULL,
-			(void __iomem *)ioremap(MX6Q_SATA_BASE_ADDR, SZ_4K));
-#endif
+		cm_fx6_init_sata();
 	}
 	imx6q_add_vpu();
 	cm_fx6_init_usb();
