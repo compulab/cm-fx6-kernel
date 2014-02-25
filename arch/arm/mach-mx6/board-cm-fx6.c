@@ -830,20 +830,21 @@ static struct imx_asrc_platform_data imx_asrc_data = {
 	.clk_map_ver	= 2,
 };
 
-static struct ipuv3_fb_platform_data sabr_fb_data[] = {
-	{ /*fb0*/
+static struct ipuv3_fb_platform_data cm_fx6_fb_data[] = {
+	{ /* fb0 */
+	/* Startek 800x480 LCD */
+	.disp_dev		= "lcd",
+	.interface_pix_fmt	= IPU_PIX_FMT_RGB24,
+	.mode_str		= "KD050C-WVGA",
+	.default_bpp		= 24,
+	.int_clk		= false,
+	}, {
 	.disp_dev		= "ldb",
 	.interface_pix_fmt	= IPU_PIX_FMT_RGB666,
 	.mode_str		= "LDB-XGA",
 	.default_bpp		= 16,
 	.int_clk		= false,
-	}, {
-	.disp_dev		= "lcd",
-	.interface_pix_fmt	= IPU_PIX_FMT_RGB565,
-	.mode_str		= "CLAA-WVGA",
-	.default_bpp		= 16,
-	.int_clk		= false,
-	}
+	},
 };
 
 static void hdmi_init(int ipu_id, int disp_id)
@@ -1239,11 +1240,11 @@ static void __init cm_fx6_init(void)
 	if (cpu_is_mx6dl()) {
 		ldb_data.ipu_id = 0;
 		ldb_data.disp_id = 0;
-		for (i = 0; i < ARRAY_SIZE(sabr_fb_data) / 2; i++)
-			imx6q_add_ipuv3fb(i, &sabr_fb_data[i]);
+		for (i = 0; i < ARRAY_SIZE(cm_fx6_fb_data) / 2; i++)
+			imx6q_add_ipuv3fb(i, &cm_fx6_fb_data[i]);
 	} else {
-		for (i = 0; i < ARRAY_SIZE(sabr_fb_data); i++)
-			imx6q_add_ipuv3fb(i, &sabr_fb_data[i]);
+		for (i = 0; i < ARRAY_SIZE(cm_fx6_fb_data); i++)
+			imx6q_add_ipuv3fb(i, &cm_fx6_fb_data[i]);
 	}
 
 	imx6q_add_vdoa();
