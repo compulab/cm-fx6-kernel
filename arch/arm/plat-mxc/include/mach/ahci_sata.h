@@ -26,7 +26,7 @@ enum {
 	HOST_RESET		= (1 << 0),  /* reset controller; self-clear */
 	HOST_PORTS_IMPL	= 0x0c,
 	HOST_TIMER1MS = 0xe0, /* Timer 1-ms */
-	HOST_VERSIONR = 0xfc, /* host version register*/
+	HOST_VERSIONR = 0xf8, /* host version register*/
 
 	/* Offest used to control the MPLL input clk */
 	PHY_CR_CLOCK_FREQ_OVRD = 0x12,
