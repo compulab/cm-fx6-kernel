@@ -277,6 +277,23 @@ static struct fec_platform_data fec_data __initdata = {
 	.gpio_irq		= -1,
 };
 
+static void cm_fx6_spi_device_register(int busnum, struct spi_board_info *info,
+				       const char *name)
+{
+	struct spi_master *master = spi_busnum_to_master(busnum);
+	if (!master) {
+		pr_err("%s: SPI-%d: could not get master \n", __func__, busnum);
+		return;
+	}
+
+	if (!spi_new_device(master, info)) {
+		pr_err("%s: SPI-%d: could not instantiate device %s \n",
+		       __func__, busnum, name);
+	}
+
+	spi_master_put(master);
+}
+
 static int cm_fx6_spi0_cs[] = {
 	CM_FX6_ECSPI1_CS0,
 	CM_FX6_ECSPI1_CS1,
@@ -354,6 +371,35 @@ static void cm_fx6_init_spi(void)
 }
 
 #if defined(CONFIG_I2C_IMX)
+static void cm_fx6_i2c_device_register(int busnum, struct i2c_board_info *info,
+				       const char *name)
+{
+	struct i2c_adapter *i2c_adapter;
+
+	i2c_adapter = i2c_get_adapter(busnum);
+	if (!i2c_adapter) {
+		pr_err("%s: I2C-%d: could not get adapter \n", __func__, busnum);
+		return;
+	}
+
+	if (!i2c_new_device(i2c_adapter, info)) {
+		pr_err("%s: I2C-%d: could not instantiate device %s \n",
+		       __func__, busnum, name);
+	}
+
+	i2c_put_adapter(i2c_adapter);
+}
+
+static void __init sb_fx6_init(void)
+{
+	pr_info("CM-FX6: set up SB-FX6 evaluation board \n");
+}
+
+static void __init sb_fx6m_init(void)
+{
+	pr_info("CM-FX6: set up SB-FX6m - Utilite device \n");
+}
+
 static void eeprom_read_mac_address(struct memory_accessor *ma, unsigned char *mac)
 {
 	int err;
@@ -386,6 +432,10 @@ static void sb_fx6_id_eeprom_setup(struct memory_accessor *ma, void *context)
 	}
 	baseboard[EEPROM_BOARD_NAME_LEN - 1] = '\0';
 	pr_info("CM-FX6: start on %s board \n", baseboard);
+	if (!strncmp(baseboard, "SB-FX6m", EEPROM_BOARD_NAME_LEN))
+		sb_fx6m_init();
+	else
+		sb_fx6_init();
 }
 
 static struct at24_platform_data cm_fx6_id_eeprom_data = {
