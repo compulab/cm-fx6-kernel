@@ -129,11 +129,11 @@ static const struct esdhc_platform_data cm_fx6_sd1_data __initconst = {
 	.keep_power_at_suspend  = 1,
 };
 
-static const struct esdhc_platform_data cm_fx6_sd3_data __initconst = {
-	.cd_gpio		= SB_FX6_SD3_CD,
-	.wp_gpio		= SB_FX6_SD3_WP,
-	.cd_type		= ESDHC_CD_GPIO,
-	.always_present		= 0,	/* ! */
+static struct esdhc_platform_data cm_fx6_sd3_data __initdata = {
+	.cd_gpio		= -1,
+	.wp_gpio		= -1,
+	.cd_type		= ESDHC_CD_NONE,
+	.always_present		= 1,	/* ! */
 	.keep_power_at_suspend	= 1,
 	.delay_line		= 0,
 };
@@ -393,6 +393,12 @@ static void cm_fx6_i2c_device_register(int busnum, struct i2c_board_info *info,
 static void __init sb_fx6_init(void)
 {
 	pr_info("CM-FX6: set up SB-FX6 evaluation board \n");
+
+	/* re-configure SD3 for insertion / removal detection */
+	cm_fx6_sd3_data.cd_gpio		= SB_FX6_SD3_CD;
+	cm_fx6_sd3_data.wp_gpio		= SB_FX6_SD3_WP;
+	cm_fx6_sd3_data.cd_type		= ESDHC_CD_GPIO;
+	cm_fx6_sd3_data.always_present	= 0;
 }
 
 static void __init sb_fx6m_init(void)
@@ -436,6 +442,8 @@ static void sb_fx6_id_eeprom_setup(struct memory_accessor *ma, void *context)
 		sb_fx6m_init();
 	else
 		sb_fx6_init();
+
+	sb_fx6_sd_init();
 }
 
 static struct at24_platform_data cm_fx6_id_eeprom_data = {
@@ -1229,7 +1237,7 @@ static void __init cm_fx6_init(void)
 	// imx6_init_fec(fec_data); -- called asynchronously by cm_fx6_id_eeprom_setup()
 
 	imx6q_add_pm_imx(0, &cm_fx6_pm_data);
-	sb_fx6_sd_init();
+	// sb_fx6_sd_init(); -- called asynchronously by sb_fx6_id_eeprom_setup()
 	imx_add_viv_gpu(&imx6_gpu_data, &imx6_gpu_pdata);
 	if (cpu_is_mx6q()) {
 		cm_fx6_init_sata();
