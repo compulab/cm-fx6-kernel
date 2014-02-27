@@ -76,6 +76,7 @@
 /* GPIO PIN, sort by PORT/BIT */
 #define CM_FX6_USBH1_PWR		IMX_GPIO_NR(1, 0)
 #define SB_FX6_DVI_DDC_SEL		IMX_GPIO_NR(1, 2)
+#define SB_FX6_HIMAX_PENDOWN		IMX_GPIO_NR(1, 4)
 #define CM_FX6_iSSD_SATA_PWREN		IMX_GPIO_NR(1, 28)
 #define CM_FX6_iSSD_SATA_VDDC_CTRL	IMX_GPIO_NR(1, 30)
 #define CM_FX6_ADS7846_PENDOWN		IMX_GPIO_NR(2, 15)
@@ -121,6 +122,7 @@ extern char *soc_reg_id;
 extern char *pu_reg_id;
 
 static void sb_fx6_gpio_expander_register(void);
+static void sb_fx6_touchscreen_himax_register(void);
 
 static const struct esdhc_platform_data cm_fx6_sd1_data __initconst = {
 	.always_present         = 1,
@@ -450,6 +452,7 @@ static void __init sb_fx6_init(void)
 
 	sb_fx6_gpio_expander_register();
 	scf0403_lcd_register();
+	sb_fx6_touchscreen_himax_register();
 }
 
 static void __init sb_fx6m_init(void)
@@ -563,6 +566,32 @@ static void sb_fx6_gpio_expander_register(void)
 #else
 
 static void sb_fx6_gpio_expander_register(void) {}
+#endif
+
+#if (defined CONFIG_TOUCHSCREEN_HIMAX) || (defined CONFIG_TOUCHSCREEN_HIMAX_MODULE)
+static struct i2c_board_info sb_fx6_ts_himax_info = {
+	I2C_BOARD_INFO("hx8526-a", 0x4a),
+	.irq = gpio_to_irq(SB_FX6_HIMAX_PENDOWN),
+};
+
+static void sb_fx6_touchscreen_himax_register(void)
+{
+	int err;
+
+	err = gpio_request_one(SB_FX6_HIMAX_PENDOWN, GPIOF_IN, "himax_pen");
+	if (err) {
+		pr_err("could not acquire gpio %u (himax_pen): %d \n", SB_FX6_HIMAX_PENDOWN, err);
+		return;
+	}
+
+	gpio_export(SB_FX6_HIMAX_PENDOWN, false);
+
+	cm_fx6_i2c_device_register(3, &sb_fx6_ts_himax_info, "HIMAX touch controller");
+}
+
+#else
+
+static inline void sb_fx6_touchscreen_himax_register(void) {}
 #endif
 
 static struct imxi2c_platform_data cm_fx6_i2c0_data = {
