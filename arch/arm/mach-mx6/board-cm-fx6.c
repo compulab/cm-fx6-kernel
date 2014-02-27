@@ -47,6 +47,7 @@
 #include <linux/mfd/mxc-hdmi-core.h>
 #include <linux/gpio-i2cmux.h>
 #include <linux/spi/scf0403.h>
+#include <linux/spi/ads7846.h>
 
 #include <mach/common.h>
 #include <mach/hardware.h>
@@ -77,6 +78,7 @@
 #define SB_FX6_DVI_DDC_SEL		IMX_GPIO_NR(1, 2)
 #define CM_FX6_iSSD_SATA_PWREN		IMX_GPIO_NR(1, 28)
 #define CM_FX6_iSSD_SATA_VDDC_CTRL	IMX_GPIO_NR(1, 30)
+#define CM_FX6_ADS7846_PENDOWN		IMX_GPIO_NR(2, 15)
 #define CM_FX6_iSSD_SATA_LDO_EN		IMX_GPIO_NR(2, 16)
 #define CM_FX6_ECSPI1_CS0		IMX_GPIO_NR(2, 30)
 #define CM_FX6_GREEN_LED		IMX_GPIO_NR(2, 31)
@@ -338,6 +340,23 @@ static struct flash_platform_data cm_fx6_spi_flash_data = {
 };
 #endif
 
+#if (defined CONFIG_TOUCHSCREEN_ADS7846) || (defined CONFIG_TOUCHSCREEN_ADS7846_MODULE)
+static struct ads7846_platform_data ads7846_config = {
+	.x_min			= 0x10a0,
+	.x_max			= 0x1ef0,
+	.y_min			= 0x1100,
+	.y_max			= 0x1ef0,
+	.reverse_y		= true,
+	.x_plate_ohms		= 180,
+	.pressure_max		= 255,
+	.debounce_max		= 30,
+	.debounce_tol		= 10,
+	.debounce_rep		= 1,
+	.gpio_pendown		= CM_FX6_ADS7846_PENDOWN,
+	.keep_vref_on		= true,
+};
+#endif
+
 #if defined(CONFIG_LCD_SCF0403) || defined(CONFIG_LCD_SCF0403_MODULE)
 static struct scf0403_pdata scf0403_config = {
 	.reset_gpio	= SB_FX6_LCD_RST,
@@ -370,6 +389,16 @@ static struct spi_board_info cm_fx6_spi0_board_info[] = {
 		.bus_num	= 0,
 		.chip_select	= 0,
 		.platform_data	= &cm_fx6_spi_flash_data,
+	},
+#endif
+#if (defined CONFIG_TOUCHSCREEN_ADS7846) || (defined CONFIG_TOUCHSCREEN_ADS7846_MODULE)
+	{
+		.modalias	= "ads7846",
+		.max_speed_hz	= 1500000,
+		.bus_num	= 0,
+		.chip_select	= 1,
+		.irq		= gpio_to_irq(CM_FX6_ADS7846_PENDOWN),
+		.platform_data	= &ads7846_config,
 	},
 #endif
 };
