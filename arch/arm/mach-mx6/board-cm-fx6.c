@@ -1737,7 +1737,8 @@ static int __init cm_fx6_init_late(void)
 	 * This function has to be called after
 	 * all frame buffers have been registered
 	 */
-	cm_fx6_init_v4l();
+	if (cpu_is_mx6q())
+		cm_fx6_init_v4l();
 
 	return 0;
 }
