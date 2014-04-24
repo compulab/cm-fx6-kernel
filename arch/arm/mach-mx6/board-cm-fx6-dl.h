@@ -142,6 +142,7 @@ static iomux_v3_cfg_t cm_fx6_dl_pads[] = {
 
 	/* GPIO key */
 	MX6DL_PAD_ENET_TXD1__GPIO_1_29,
+	MX6DL_PAD_GPIO_18__GPIO_7_13,
 
 	/* CLKO: master clock to audio codec */
 	MX6DL_PAD_GPIO_5__CCM_CLKO,

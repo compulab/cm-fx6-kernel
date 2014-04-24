@@ -105,6 +105,7 @@
 #define CM_FX6_SD3_CD			IMX_GPIO_NR(7, 1)
 #define CM_FX6_USBHUB_nRST		IMX_GPIO_NR(7, 8)
 #define CM_FX6_WIFI_nPD			IMX_GPIO_NR(7, 12)
+#define SB_FX6_GPIO_HOMEBTN		IMX_GPIO_NR(7, 13)
 
 #define SB_FX6_PCA9555_BASE_ADDR	IMX_GPIO_NR(8, 0)
 
@@ -1273,6 +1274,7 @@ static inline void cm_fx6_init_led(void) {}
 
 static struct gpio_keys_button cm_fx6_buttons[] = {
 	GPIO_BUTTON(SB_FX6_GPIO_PWRBTN, KEY_POWER, 1, "power-button", 1, 1),
+	GPIO_BUTTON(SB_FX6_GPIO_HOMEBTN, KEY_HOMEPAGE, 1, "home-button", 0, 1),
 };
 
 static struct gpio_keys_platform_data cm_fx6_button_data = {
