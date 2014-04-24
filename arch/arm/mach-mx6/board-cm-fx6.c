@@ -54,6 +54,7 @@
 #include <linux/ds2782_battery.h>
 #include <linux/spi/scf0403.h>
 #include <linux/spi/ads7846.h>
+#include <linux/gpio-i2cmux.h>
 
 #include <mach/common.h>
 #include <mach/hardware.h>
@@ -82,6 +83,7 @@
 
 /* GPIO PIN, sort by PORT/BIT */
 #define CM_FX6_USBH1_PWR		IMX_GPIO_NR(1, 0)
+#define SB_FX6_DVI_DDC_SEL		IMX_GPIO_NR(1, 2)
 #define SB_FX6_HIMAX_PENDOWN		IMX_GPIO_NR(1, 4)
 #define CM_FX6_iSSD_SATA_PWREN		IMX_GPIO_NR(1, 28)
 #define SB_FX6_GPIO_PWRBTN		IMX_GPIO_NR(1, 29)
@@ -501,7 +503,7 @@ static struct imxi2c_platform_data cm_fx6_i2c2_data = {
 	.bitrate = 400000,
 };
 
-static struct i2c_board_info mxc_i2c0_board_info[] __initdata = {
+static struct i2c_board_info mxc_i2c0_3_board_info[] __initdata = {
 #ifdef CONFIG_EEPROM_AT24
 	{
 		/* EEPROM on the base board: 24c02 */
@@ -527,6 +529,9 @@ static struct i2c_board_info mxc_i2c0_board_info[] __initdata = {
 		.irq = gpio_to_irq(SB_FX6_HIMAX_PENDOWN),
 	},
 #endif
+};
+
+static struct i2c_board_info mxc_i2c0_4_board_info[] __initdata = {
 #ifdef CONFIG_FB_MXC_EDID
 	{
 		I2C_BOARD_INFO("mxc_dvi", 0x1f),
@@ -577,6 +582,34 @@ static void __init sb_fx6_touchscreen_himax_init(void)
 static inline void sb_fx6_touchscreen_himax_init(void) {}
 #endif	// CONFIG_TOUCHSCREEN_HIMAX
 
+
+static const unsigned sb_fx6_i2cmux_gpios[] = {
+	SB_FX6_DVI_DDC_SEL
+};
+
+static const unsigned sb_fx6_i2cmux_values[] = {
+	0, 1
+};
+
+static struct gpio_i2cmux_platform_data sb_fx6_i2cmux_data = {
+	.parent		= 0,			/* multiplex I2C-0 */
+	.base_nr	= 3,			/* create I2C-3+ */
+	.gpios		= sb_fx6_i2cmux_gpios,
+	.n_gpios	= ARRAY_SIZE(sb_fx6_i2cmux_gpios),
+	.values		= sb_fx6_i2cmux_values,
+	.n_values	= ARRAY_SIZE(sb_fx6_i2cmux_values),
+	.idle		= GPIO_I2CMUX_NO_IDLE,
+};
+
+static struct platform_device sb_fx6_i2cmux = {
+	.name		= "gpio-i2cmux",
+	.id		= -1,
+	.dev		= {
+		.platform_data = &sb_fx6_i2cmux_data,
+	},
+};
+
+
 static void __init cm_fx6_init_i2c(void)
 {
 	sb_fx6_touchscreen_himax_init();
@@ -584,12 +617,17 @@ static void __init cm_fx6_init_i2c(void)
 	imx6q_add_imx_i2c(0, &cm_fx6_i2c0_data);
 	imx6q_add_imx_i2c(1, &cm_fx6_i2c1_data);
 	imx6q_add_imx_i2c(2, &cm_fx6_i2c2_data);
-	i2c_register_board_info(0, mxc_i2c0_board_info,
-				ARRAY_SIZE(mxc_i2c0_board_info));
 	i2c_register_board_info(1, mxc_i2c1_board_info,
 				ARRAY_SIZE(mxc_i2c1_board_info));
 	i2c_register_board_info(2, mxc_i2c2_board_info,
 				ARRAY_SIZE(mxc_i2c2_board_info));
+
+	/* I2C multiplexing: I2C-0 --> I2C-3, I2C-4 */
+	platform_device_register(&sb_fx6_i2cmux);
+	i2c_register_board_info(3, mxc_i2c0_3_board_info,
+				ARRAY_SIZE(mxc_i2c0_3_board_info));
+	i2c_register_board_info(4, mxc_i2c0_4_board_info,
+				ARRAY_SIZE(mxc_i2c0_4_board_info));
 }
 
 #else
