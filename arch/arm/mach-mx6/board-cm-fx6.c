@@ -461,7 +461,18 @@ static int pca9555_setup(struct i2c_client *client,
 	 * < 0 - set to input
 	 * > 0 - set to output, with value (gpio_value - 1)
 	 */
-	static int gpio_value[] = {2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2};
+	/*
+	 * SB-FX6:eGPIO initial state:
+	 *  0 - RED LED				- 1
+	 *  1 - RS485 [half]/full duplex	- 1
+	 *  2 - DVI transmitter enable		- 1
+	 * ...
+	 *  4 - 1.8v regulator enable		- 0
+	 * ...
+	 * 14 - Battery charger enable		- 0
+	 * 15 - GREEN LED			- 1
+	 */
+	static int gpio_value[] = {2, 2, 2, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2};
 
 	pr_info("%s: init GPIO range %u..%u \n", __FUNCTION__, gpio_base, (gpio_base + ngpio));
 	for (i = 0; i < ARRAY_SIZE(gpio_value); ++i) {
