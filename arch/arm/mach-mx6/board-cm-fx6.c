@@ -1694,6 +1694,7 @@ device_initcall_sync(cm_fx6_init_late);
 
 #define CM_FX6_MIN_SOC_VOLTAGE	1250000
 #define CM_FX6_MIN_PU_VOLTAGE	1250000
+#define CM_FX6_MIN_CPU_VOLTAGE	1250000
 
 static void cm_fx6_adjust_cpu_op(void)
 {
@@ -1710,6 +1711,8 @@ static void cm_fx6_adjust_cpu_op(void)
 				op[num].soc_voltage = CM_FX6_MIN_SOC_VOLTAGE;
 			if (op[num].pu_voltage < CM_FX6_MIN_PU_VOLTAGE)
 				op[num].pu_voltage = CM_FX6_MIN_PU_VOLTAGE;
+			if (op[num].cpu_voltage < CM_FX6_MIN_CPU_VOLTAGE)
+				op[num].cpu_voltage = CM_FX6_MIN_CPU_VOLTAGE;
 		}
 	}
 }
