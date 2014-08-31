@@ -349,10 +349,10 @@ static struct flash_platform_data cm_fx6_spi_flash_data = {
 
 #if (defined CONFIG_TOUCHSCREEN_ADS7846) || (defined CONFIG_TOUCHSCREEN_ADS7846_MODULE)
 static struct ads7846_platform_data ads7846_config = {
-	.x_min			= 0x10a0,
-	.x_max			= 0x1ef0,
-	.y_min			= 0x1100,
-	.y_max			= 0x1ef0,
+	.x_min			= 200,
+	.x_max			= 3800,
+	.y_min			= 200,
+	.y_max			= 3800,
 	.reverse_y		= true,
 	.x_plate_ohms		= 180,
 	.pressure_max		= 255,
