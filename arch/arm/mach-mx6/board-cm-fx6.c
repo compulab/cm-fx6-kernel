@@ -1644,6 +1644,7 @@ static void __init cm_fx6_init(void)
 	cm_fx6_init_usb();
 	cm_fx6_init_audio();
 	platform_device_register(&cm_fx6_vmmc_reg_devices);
+	mx6_cpu_regulator_init();
 
 	imx_asrc_data.asrc_core_clk = clk_get(NULL, "asrc_clk");
 	imx_asrc_data.asrc_audio_clk = clk_get(NULL, "asrc_serial_clk");
