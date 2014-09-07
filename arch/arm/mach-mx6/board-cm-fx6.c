@@ -1155,7 +1155,6 @@ static void __init cm_fx6_init_display(void)
 		imx6q_add_ipuv3fb(i, &cm_fx6_fb_data[i]);
 
 	imx6q_add_ldb(&ldb_data);
-	imx6q_add_v4l2_output(0);
 }
 
 #if defined(CONFIG_BACKLIGHT_PWM)
