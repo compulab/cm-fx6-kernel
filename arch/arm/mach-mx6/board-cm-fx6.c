@@ -349,10 +349,10 @@ static struct flash_platform_data cm_fx6_spi_flash_data = {
 
 #if (defined CONFIG_TOUCHSCREEN_ADS7846) || (defined CONFIG_TOUCHSCREEN_ADS7846_MODULE)
 static struct ads7846_platform_data ads7846_config = {
-	.x_min			= 0x10a0,
-	.x_max			= 0x1ef0,
-	.y_min			= 0x1100,
-	.y_max			= 0x1ef0,
+	.x_min			= 200,
+	.x_max			= 3800,
+	.y_min			= 200,
+	.y_max			= 3800,
 	.reverse_y		= true,
 	.x_plate_ohms		= 180,
 	.pressure_max		= 255,
@@ -1155,7 +1155,6 @@ static void __init cm_fx6_init_display(void)
 		imx6q_add_ipuv3fb(i, &cm_fx6_fb_data[i]);
 
 	imx6q_add_ldb(&ldb_data);
-	imx6q_add_v4l2_output(0);
 }
 
 #if defined(CONFIG_BACKLIGHT_PWM)
@@ -1607,14 +1606,6 @@ static void __init cm_fx6_init(void)
 	BUG_ON(!common_pads);
 	mxc_iomux_v3_setup_multiple_pads(common_pads, common_pads_cnt);
 
-	/*
-	 * the following is the common devices support on the shared ARM2 boards
-	 * Since i.MX6DQ/DL share the same memory/Register layout, we don't
-	 * need to diff the i.MX6DQ or i.MX6DL here. We can simply use the
-	 * mx6q_add_features() for the shared devices. For which only exist
-	 * on each indivual SOC, we can use cpu_is_mx6q/6dl() to diff it.
-	 */
-
 	gp_reg_id = cm_fx6_dvfscore_data.reg_id;
 	soc_reg_id = cm_fx6_dvfscore_data.soc_id;
 	pu_reg_id = cm_fx6_dvfscore_data.pu_id;
@@ -1644,6 +1635,7 @@ static void __init cm_fx6_init(void)
 	cm_fx6_init_usb();
 	cm_fx6_init_audio();
 	platform_device_register(&cm_fx6_vmmc_reg_devices);
+	mx6_cpu_regulator_init();
 
 	imx_asrc_data.asrc_core_clk = clk_get(NULL, "asrc_clk");
 	imx_asrc_data.asrc_audio_clk = clk_get(NULL, "asrc_serial_clk");
@@ -1677,6 +1669,60 @@ static void __init cm_fx6_init(void)
 	imx6q_add_busfreq();
 }
 
+static resource_size_t cm_fx6_v4l_msize = SZ_64M;
+
+static int __init cm_fx6_v4l_setup(char *arg)
+{
+	cm_fx6_v4l_msize = memparse(arg, NULL);
+
+	return 0;
+}
+early_param("cm_fx6_v4l_msize", cm_fx6_v4l_setup);
+
+static int __init cm_fx6_init_v4l(void)
+{
+	struct platform_device *voutdev;
+	phys_addr_t phys;
+	resource_size_t res_mbase = 0;
+	resource_size_t res_msize = cm_fx6_v4l_msize;
+	int err = 0;
+
+	if (res_msize) {
+		pr_info("%s: allocate: %u bytes \n", __func__, res_msize);
+		/* memblock_alloc_base() will not return on failure (panic). */
+		phys = memblock_alloc_base(res_msize, SZ_4K, SZ_1G);
+		err = memblock_remove(phys, res_msize);
+		if (err) {
+			pr_err("%s: memblock_remove for base=%lx, size=%lx failed: %d\n",
+			       __func__, (unsigned long) phys,
+			       (unsigned long) res_msize, err);
+			return err;
+		}
+
+		res_mbase = phys;
+	}
+
+	voutdev = imx6q_add_v4l2_output(0);
+	if (IS_ERR(voutdev)) {
+		pr_err("%s: imx6q_add_v4l2_output() failed: %ld \n",
+		       __func__, IS_ERR(voutdev));
+		return PTR_ERR(voutdev);
+	}
+
+	if (res_msize && voutdev) {
+		/* dma_declare_coherent_memory returns 0 on any error */
+		err = dma_declare_coherent_memory(&voutdev->dev,
+					res_mbase, res_mbase,res_msize,
+					DMA_MEMORY_MAP | DMA_MEMORY_EXCLUSIVE);
+		if (err == 0) {
+			platform_device_unregister(voutdev);
+			return -ENOMEM;
+		}
+	}
+
+	return 0;
+}
+
 static int __init cm_fx6_init_late(void)
 {
 	if (!machine_is_cm_fx6())
@@ -1687,12 +1733,20 @@ static int __init cm_fx6_init_late(void)
 	cm_fx6_init_hdmi();
 	cm_fx6_init_display();
 	cm_fx6_init_hdmi_audio();
+	/*
+	 * This function has to be called after
+	 * all frame buffers have been registered
+	 */
+	if (cpu_is_mx6q())
+		cm_fx6_init_v4l();
+
 	return 0;
 }
 device_initcall_sync(cm_fx6_init_late);
 
 #define CM_FX6_MIN_SOC_VOLTAGE	1250000
 #define CM_FX6_MIN_PU_VOLTAGE	1250000
+#define CM_FX6_MIN_CPU_VOLTAGE	1250000
 
 static void cm_fx6_adjust_cpu_op(void)
 {
@@ -1709,6 +1763,8 @@ static void cm_fx6_adjust_cpu_op(void)
 				op[num].soc_voltage = CM_FX6_MIN_SOC_VOLTAGE;
 			if (op[num].pu_voltage < CM_FX6_MIN_PU_VOLTAGE)
 				op[num].pu_voltage = CM_FX6_MIN_PU_VOLTAGE;
+			if (op[num].cpu_voltage < CM_FX6_MIN_CPU_VOLTAGE)
+				op[num].cpu_voltage = CM_FX6_MIN_CPU_VOLTAGE;
 		}
 	}
 }

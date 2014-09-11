@@ -109,8 +109,8 @@ struct ads7846 {
 	u16			pressure_max;
 
 	bool			swap_xy;
-	u16			reverse_x;
-	u16			reverse_y;
+	bool			reverse_x;
+	bool			reverse_y;
 	bool			use_internal;
 
 	struct ads7846_packet	*packet;
@@ -691,18 +691,24 @@ static int ads7846_no_filter(void *ads, int data_idx, int *val)
 
 static int ads7846_get_value(struct ads7846 *ts, struct spi_message *m)
 {
+	int value;
 	struct spi_transfer *t =
 		list_entry(m->transfers.prev, struct spi_transfer, transfer_list);
 
 	if (ts->model == 7845) {
-		return be16_to_cpup((__be16 *)&(((char*)t->rx_buf)[1])) >> 3;
+		value = be16_to_cpup((__be16 *)&(((char*)t->rx_buf)[1])) >> 3;
 	} else {
 		/*
 		 * adjust:  on-wire is a must-ignore bit, a BE12 value, then
 		 * padding; built from two 8 bit values written msb-first.
 		 */
-		return be16_to_cpup((__be16 *)t->rx_buf) >> 3;
+		value = be16_to_cpup((__be16 *)t->rx_buf) >> 3;
 	}
+
+	/* 
+	 * enforce ADC output is 12 bits width
+	 */
+	return value & 0xfff;
 }
 
 static void ads7846_update_value(struct spi_message *m, int val)
@@ -850,9 +856,11 @@ static void ads7846_report_state(struct ads7846 *ts)
 		if (ts->swap_xy)
 			swap(x, y);
 		if (ts->reverse_x)
-			x = ts->reverse_x - x;
+			x = (ts->input->absinfo[ABS_X].minimum +
+			     ts->input->absinfo[ABS_X].maximum) - x;
 		if (ts->reverse_y)
-			y = ts->reverse_y - y;
+			y = (ts->input->absinfo[ABS_Y].minimum +
+			     ts->input->absinfo[ABS_Y].maximum) - y;
 
 		if (!ts->pendown) {
 			input_report_key(input, BTN_TOUCH, 1);
@@ -1251,10 +1259,8 @@ static int __devinit ads7846_probe(struct spi_device *spi)
 	ts->input = input_dev;
 	ts->vref_mv = pdata->vref_mv;
 	ts->swap_xy = pdata->swap_xy;
-	if (pdata->reverse_x)
-		ts->reverse_x = pdata->x_min + pdata->x_max;
-	if (pdata->reverse_y)
-		ts->reverse_y = pdata->y_min + pdata->y_max;
+	ts->reverse_x = pdata->reverse_x;
+	ts->reverse_y = pdata->reverse_y;
 
 	mutex_init(&ts->lock);
 	init_waitqueue_head(&ts->wait);
