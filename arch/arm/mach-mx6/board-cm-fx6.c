@@ -871,10 +871,10 @@ static struct gpio sata_issd_gpios[] = {
 	{ CM_FX6_iSSD_SATA_nRSTDLY,	GPIOF_OUT_INIT_HIGH,	"sata nrst" },
 
 	/* keep the order of power sequence ! */
+	{ CM_FX6_iSSD_SATA_LDO_EN,	GPIOF_OUT_INIT_LOW,	"sata ldo en" },	// VDCC
 	{ CM_FX6_iSSD_SATA_PWREN,	GPIOF_OUT_INIT_LOW,	"sata pwren" },		// VCC_IO
 	{ CM_FX6_iSSD_SATA_nSTDBY1,	GPIOF_OUT_INIT_LOW,	"sata nstdby1" },	// VCC_FLASH
 	{ CM_FX6_iSSD_SATA_nSTDBY2,	GPIOF_OUT_INIT_LOW,	"sata nstdby2" },	// VCCQ
-	{ CM_FX6_iSSD_SATA_LDO_EN,	GPIOF_OUT_INIT_LOW,	"sata ldo en" },	// VDCC
 };
 
 /*
