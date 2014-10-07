@@ -920,23 +920,17 @@ static void cm_fx6_iSSD_cleanup(void)
 }
 
 /* HW Initialization, if return 0, initialization is successful. */
-static int cm_fx6_sata_init(struct device *dev, void __iomem *addr)
+static int __cm_fx6_sata_init(struct device *dev, void __iomem *addr)
 {
 	u32 tmpdata;
 	int ret = 0;
 	struct clk *clk;
 
-	ret = cm_fx6_iSSD_init();
-	if (ret != 0) {
-		dev_err(dev, "could not acquire iSSD GPIO: %d \n", ret);
-		return ret;
-	}
-
 	sata_clk = clk_get(dev, "imx_sata_clk");
 	if (IS_ERR(sata_clk)) {
 		dev_err(dev, "no sata clock.\n");
 		ret = PTR_ERR(sata_clk);
-		goto release_drive;
+		goto out;
 	}
 	ret = clk_enable(sata_clk);
 	if (ret) {
@@ -989,10 +983,39 @@ release_sata_clk:
 	clk_disable(sata_clk);
 put_sata_clk:
 	clk_put(sata_clk);
-release_drive:
+out:
+	dev_err(dev, "disable SATA controller \n");
+	return ret;
+}
+
+#define CM_FX6_SATA_INIT_RETRIES	10
+
+static int cm_fx6_sata_init(struct device *dev, void __iomem *addr)
+{
+	int i, ret;
+
+	ret = cm_fx6_iSSD_init();
+	if (ret != 0) {
+		dev_err(dev, "could not acquire iSSD GPIO: %d \n", ret);
+		return ret;
+	}
+
+	for (i = 0; i < CM_FX6_SATA_INIT_RETRIES; ++i) {
+		ret = __cm_fx6_sata_init(dev, addr);
+		if (ret == 0)
+			goto out;
+
+		if (ret != -EAGAIN)
+			goto out_err;
+
+		dev_info(dev, "%s: retry %d/%d \n",
+			 __func__, (i + 1), CM_FX6_SATA_INIT_RETRIES);
+	}
+
+out_err:
 	cm_fx6_iSSD_cleanup();
 
-	dev_err(dev, "disable SATA controller \n");
+out:
 	return ret;
 }
 
