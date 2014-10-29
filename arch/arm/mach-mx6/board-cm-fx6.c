@@ -1088,16 +1088,17 @@ static struct fsl_mxc_hdmi_core_platform_data hdmi_core_data = {
 	.disp_id	= 0,
 };
 
-static struct platform_device mxc_hdmi_audio_device = {
-	.name           = "mxc_hdmi_audio",
-	.id             = -1,
-};
-
 static void __init cm_fx6_init_hdmi(void)
 {
 	imx6q_add_mxc_hdmi_core(&hdmi_core_data);
 	imx6q_add_mxc_hdmi(&hdmi_data);
 }
+
+#if (defined CONFIG_SND_SOC_IMX_HDMI) || (defined CONFIG_SND_SOC_IMX_HDMI_MODULE)
+static struct platform_device mxc_hdmi_audio_device = {
+	.name           = "mxc_hdmi_audio",
+	.id             = -1,
+};
 
 static void __init cm_fx6_init_hdmi_audio(void)
 {
@@ -1105,6 +1106,11 @@ static void __init cm_fx6_init_hdmi_audio(void)
 	imx6q_add_hdmi_soc_dai();
 	platform_device_register(&mxc_hdmi_audio_device);
 }
+
+#else
+
+static void cm_fx6_init_hdmi_audio(void) {}
+#endif
 
 static struct fsl_mxc_lcd_platform_data lcdif_data = {
 	.ipu_id		= 0,
@@ -1395,7 +1401,7 @@ static void __init cm_fx6_fixup(struct machine_desc *desc, struct tag *tags,
 	}
 }
 
-#ifdef CONFIG_SND_SOC_IMX_SPDIF
+#if (defined CONFIG_SND_SOC_IMX_SPDIF) || (defined CONFIG_SND_SOC_IMX_SPDIF_MODULE)
 static int spdif_clk_set_rate(struct clk *clk, unsigned long rate)
 {
 	unsigned long rate_actual;
