@@ -1027,9 +1027,32 @@ static void cm_fx6_sata_exit(struct device *dev)
 	cm_fx6_iSSD_cleanup();
 }
 
+static int cm_fx6_ahci_suspend(struct device *dev)
+{
+	writel((readl(IOMUXC_GPR13) & ~0x2), IOMUXC_GPR13);
+	clk_disable(sata_clk);
+
+	return 0;
+}
+
+static int cm_fx6_ahci_resume(struct device *dev)
+{
+	int ret;
+
+	ret = clk_enable(sata_clk);
+	if (ret)
+		dev_err(dev, "can't enable sata clock.\n");
+
+	writel(((readl(IOMUXC_GPR13) & ~0x2) | 0x2), IOMUXC_GPR13);
+
+	return 0;
+}
+
 static struct ahci_platform_data cm_fx6_sata_data = {
 	.init	= cm_fx6_sata_init,
 	.exit	= cm_fx6_sata_exit,
+	.suspend = cm_fx6_ahci_suspend,
+	.resume	= cm_fx6_ahci_resume,
 };
 
 static void __init cm_fx6_init_sata(void)
