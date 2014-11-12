@@ -919,6 +919,16 @@ static void cm_fx6_iSSD_cleanup(void)
 	gpio_free_array(sata_issd_gpios, ARRAY_SIZE(sata_issd_gpios));
 }
 
+static inline void cm_fx6_iSSD_suspend(void)
+{
+	gpio_set_value(CM_FX6_iSSD_SATA_PHY_SLP, 0);
+}
+
+static inline void cm_fx6_iSSD_resume(void)
+{
+	gpio_set_value(CM_FX6_iSSD_SATA_PHY_SLP, 1);
+}
+
 /* HW Initialization, if return 0, initialization is successful. */
 static int __cm_fx6_sata_init(struct device *dev, void __iomem *addr)
 {
@@ -1032,12 +1042,16 @@ static int cm_fx6_ahci_suspend(struct device *dev)
 	writel((readl(IOMUXC_GPR13) & ~0x2), IOMUXC_GPR13);
 	clk_disable(sata_clk);
 
+	cm_fx6_iSSD_suspend();
+
 	return 0;
 }
 
 static int cm_fx6_ahci_resume(struct device *dev)
 {
 	int ret;
+
+	cm_fx6_iSSD_resume();
 
 	ret = clk_enable(sata_clk);
 	if (ret)
